@@ -1,0 +1,42 @@
+server:
+  port: 8081
+
+
+# Database Configuration
+# Uses "db" as default host (Docker service name), "localhost" as fallback
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:emaildb}
+    username: ${DB_USER:admin}
+    password: ${DB_PASSWORD:secure_db_password}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+  expiration: 900000
+  refresh-expiration: 604800000
+
+# Google OAuth
+google:
+  client:
+    id: ${GOOGLE_CLIENT_ID:your-google-client-id.apps.googleusercontent.com}
+    secret: ${GOOGLE_CLIENT_SECRET:your-google-client-secret}
+  application:
+    name: email-client
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+#logging:
+#  level:
+#    org.springdoc: DEBUG
+#    org.springframework.web: DEBUG

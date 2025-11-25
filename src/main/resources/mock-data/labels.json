@@ -1,0 +1,6 @@
+[
+  { "id": "INBOX", "name": "Inbox", "type": "system", "messagesUnread": 3 },
+  { "id": "SENT", "name": "Sent", "type": "system" },
+  { "id": "DRAFT", "name": "Drafts", "type": "system" },
+  { "id": "TRASH", "name": "Trash", "type": "system" }
+]

@@ -1,0 +1,38 @@
+[
+  {
+    "id": "mock-1",
+    "snippet": "Welcome to your new dashboard...",
+    "labelIds": ["INBOX"],
+    "payload": {
+      "headers": [
+        { "name": "Subject", "value": "Welcome to Project!" },
+        { "name": "From", "value": "admin@test.com" },
+        { "name": "Date", "value": "Mon, 20 Nov 2025 09:00:00 +0000" }
+      ]
+    }
+  },
+  {
+    "id": "mock-2",
+    "snippet": "Don't forget the meeting tomorrow.",
+    "labelIds": ["INBOX"],
+    "payload": {
+      "headers": [
+        { "name": "Subject", "value": "Meeting Reminder" },
+        { "name": "From", "value": "boss@test.com" },
+        { "name": "Date", "value": "Mon, 20 Nov 2025 10:00:00 +0000" }
+      ]
+    }
+  },
+  {
+    "id": "mock-3",
+    "snippet": "Your subscription has been updated.",
+    "labelIds": ["INBOX"],
+    "payload": {
+      "headers": [
+        { "name": "Subject", "value": "Subscription Update" },
+        { "name": "From", "value": "service@saas.com" },
+        { "name": "Date", "value": "Mon, 20 Nov 2025 11:00:00 +0000" }
+      ]
+    }
+  }
+]
