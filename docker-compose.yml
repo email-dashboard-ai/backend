@@ -1,7 +1,7 @@
 services:
   # PostgreSQL Database Service
   db:
-    image: postgres:15-alpine
+    image: postgres:17-alpine
     container_name: email-db
     restart: always
     environment:
@@ -19,11 +19,11 @@ services:
   backend:
     container_name: email-api
     build:
-      context: ..  # Points to the project root (where Dockerfile is)
+      context: .
       dockerfile: Dockerfile
     restart: on-failure
     ports:
-      - "8080:8080"
+      - "3000:3000"
     environment:
       - DB_HOST=db
       - DB_PORT=5432

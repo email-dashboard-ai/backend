@@ -95,7 +95,7 @@ GOOGLE_CLIENT_ID=your-google-oauth-client-id.googleusercontent.com
 GOOGLE_CLIENT_SECRET=your-google-oauth-client-secret
 
 # Application Configuration
-SERVER_PORT=8081
+SERVER_PORT=3000
 CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
 ```
 
@@ -116,8 +116,8 @@ CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
 3. **Configure OAuth Consent Screen**
 
    - Add authorized domains
-   - Set scopes: `https://www.googleapis.com/auth/gmail.readonly`
-   - Add test users (for development)
+   - Set scopes (APIs & Services > OAuth Consent Screen > Data Access): `https://www.googleapis.com/auth/gmail.readonly`
+   - Add test users (APIs & Services > OAuth Consent Screen > Data Access - for development)
 
 4. **Create OAuth 2.0 Credentials**
    - Application type: Web application
@@ -139,8 +139,8 @@ docker-compose down
 
 **Service URLs:**
 
-- 🖥️ **Backend API**: http://localhost:8081
-- 📚 **API Documentation**: http://localhost:8081/swagger-ui/index.html
+- 🖥️ **Backend API**: http://localhost:3000
+- 📚 **API Documentation**: http://localhost:3000/swagger-ui/index.html
 - 🗄️ **Database**: localhost:5432
 
 ### 4. 🔧 Local Development
@@ -270,7 +270,7 @@ Key configuration options in `application.yml`:
 ```yaml
 # Core Application Settings
 server:
-  port: ${SERVER_PORT:8081}
+  port: ${SERVER_PORT:3000}
 
 # Database Configuration
 spring:
@@ -443,7 +443,7 @@ For support and questions:
 
 - 📧 **Email**: support@yourdomain.com
 - 🐛 **Issues**: [GitHub Issues](https://github.com/yourusername/email-backend/issues)
-- 📖 **Documentation**: [API Docs](http://localhost:8081/swagger-ui/index.html)
+- 📖 **Documentation**: [API Docs](http://localhost:3000/swagger-ui/index.html)
 
 ---
 
