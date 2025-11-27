@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import org.example.config.AppConfig;
+
 @RestController
 @RequestMapping("/api/gmail")
 @RequiredArgsConstructor
@@ -22,6 +24,7 @@ import java.util.List;
 public class EmailController {
 
     private final EmailService emailService;
+    private final AppConfig appConfig;
 
     @Operation(summary = "Get Mailboxes", description = "Returns a list of labels (folders) like INBOX, SENT, etc.")
     @GetMapping("/labels")
@@ -39,9 +42,10 @@ public class EmailController {
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable String labelId,
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int limit
+            @RequestParam(required = false) Integer limit
     ) {
-        return ResponseWrapper.success(emailService.getEmails(userDetails.getUsername(), labelId, page, limit), "Emails fetched successfully");
+        int actualLimit = (limit != null) ? limit : appConfig.getGmail().getDefaultLimit();
+        return ResponseWrapper.success(emailService.getEmails(userDetails.getUsername(), labelId, page, actualLimit), "Emails fetched successfully");
     }
 
     @Operation(summary = "Get Email Detail", description = "Returns the full content of a specific email by ID.")
