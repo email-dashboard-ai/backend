@@ -13,9 +13,13 @@ import lombok.NoArgsConstructor;
 @Schema(description = "Response object containing JWT tokens")
 public class AuthResponse {
 
-    @Schema(description = "Access token for authentication", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
-    private String accessToken;
+  @Schema(
+      description = "Access token for authentication",
+      example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+  private String accessToken;
 
-    @Schema(description = "Refresh token for renewing access", example = "dXNlci1yZWZyZXNoLXRva2Vu...")
-    private String refreshToken;
+  @Schema(
+      description = "Refresh token for renewing access",
+      example = "dXNlci1yZWZyZXNoLXRva2Vu...")
+  private String refreshToken;
 }

@@ -12,32 +12,19 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @OpenAPIDefinition(
-        info = @Info(
-                contact = @Contact(
-                        name = "Dev Team",
-                        email = "dev@example.com"
-                ),
-                description = "OpenAPI documentation for Email Dashboard with Gmail Integration",
-                title = "Email Dashboard API",
-                version = "1.0"
-        ),
-        servers = {
-                @Server(
-                        description = "Local ENV",
-                        url = "http://localhost:3000"
-                )
-        },
-        security = {
-                @SecurityRequirement(name = "bearerAuth")
-        }
-)
+    info =
+        @Info(
+            contact = @Contact(name = "Dev Team", email = "dev@example.com"),
+            description = "OpenAPI documentation for Email Dashboard with Gmail Integration",
+            title = "Email Dashboard API",
+            version = "1.0"),
+    servers = {@Server(description = "Local ENV", url = "http://localhost:3000")},
+    security = {@SecurityRequirement(name = "bearerAuth")})
 @SecurityScheme(
-        name = "bearerAuth",
-        description = "JWT auth description",
-        scheme = "bearer",
-        type = SecuritySchemeType.HTTP,
-        bearerFormat = "JWT",
-        in = SecuritySchemeIn.HEADER
-)
-public class OpenApiConfig {
-}
+    name = "bearerAuth",
+    description = "JWT auth description",
+    scheme = "bearer",
+    type = SecuritySchemeType.HTTP,
+    bearerFormat = "JWT",
+    in = SecuritySchemeIn.HEADER)
+public class OpenApiConfig {}

@@ -5,7 +5,9 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import jakarta.transaction.Transactional;
+import java.io.IOException;
 import lombok.RequiredArgsConstructor;
+import org.example.config.AppConfig;
 import org.example.dto.request.AuthRequest;
 import org.example.dto.request.GoogleAuthRequest;
 import org.example.dto.request.RefreshTokenRequest;
@@ -28,130 +30,139 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-
 @Service
 @RequiredArgsConstructor
 public class AuthenticationServiceImpl implements AuthenticationService {
-    private final UserRepository repository;
-    private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService;
-    private final AuthenticationManager authenticationManager;
-    private final RefreshTokenService refreshTokenService;
-    private final RefreshTokenRepository refreshTokenRepository;
+  private final UserRepository repository;
+  private final PasswordEncoder passwordEncoder;
+  private final JwtService jwtService;
+  private final AuthenticationManager authenticationManager;
+  private final RefreshTokenService refreshTokenService;
+  private final RefreshTokenRepository refreshTokenRepository;
+  private final AppConfig appConfig;
 
-    @Value("${google.client.id}")
-    private String googleClientId;
+  @Value("${google.client.id}")
+  private String googleClientId;
 
-    @Value("${google.client.secret}")
-    private String googleClientSecret;
+  @Value("${google.client.secret}")
+  private String googleClientSecret;
 
-    @Override
-    public AuthResponse register(RegisterRequest request) {
-        // 1. PREVENT DUPLICATES: Check DB before saving
-        if (repository.findByEmail(request.getEmail()).isPresent()) {
-            throw new UserAlreadyExistsException("Email already in use: " + request.getEmail());
-        }
-
-        var user = new User();
-        user.setName(request.getName());
-        user.setEmail(request.getEmail());
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setProvider(AuthProvider.LOCAL);
-        repository.save(user);
-
-        var jwtToken = jwtService.generateToken(user);
-        var refreshToken = refreshTokenService.createRefreshToken(user.getEmail());
-
-        return AuthResponse.builder()
-                .accessToken(jwtToken)
-                .refreshToken(refreshToken.getToken())
-                .build();
+  @Override
+  public AuthResponse register(RegisterRequest request) {
+    // 1. PREVENT DUPLICATES: Check DB before saving
+    if (repository.findByEmail(request.getEmail()).isPresent()) {
+      throw new UserAlreadyExistsException("Email already in use: " + request.getEmail());
     }
 
-    @Override
-    public AuthResponse authenticate(AuthRequest request) {
-        // This throws BadCredentialsException if auth fails, which GlobalHandler catches
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-        );
+    var user = new User();
+    user.setName(request.getName());
+    user.setEmail(request.getEmail());
+    user.setPassword(passwordEncoder.encode(request.getPassword()));
+    user.setProvider(AuthProvider.LOCAL);
+    repository.save(user);
 
-        var user = repository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+    var jwtToken = jwtService.generateToken(user);
+    var refreshToken = refreshTokenService.createRefreshToken(user.getEmail());
 
-        var jwtToken = jwtService.generateToken(user);
-        var refreshToken = refreshTokenService.createRefreshToken(user.getEmail());
+    return AuthResponse.builder()
+        .accessToken(jwtToken)
+        .refreshToken(refreshToken.getToken())
+        .build();
+  }
 
-        return AuthResponse.builder()
-                .accessToken(jwtToken)
-                .refreshToken(refreshToken.getToken())
-                .build();
-    }
+  @Override
+  public AuthResponse authenticate(AuthRequest request) {
+    // This throws BadCredentialsException if auth fails, which GlobalHandler catches
+    authenticationManager.authenticate(
+        new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
 
-    @Override
-    public AuthResponse authenticateGoogle(GoogleAuthRequest request) throws IOException {
-        // 1. Exchange Auth Code for Tokens with Google
-        GoogleTokenResponse tokenResponse = new GoogleAuthorizationCodeTokenRequest(
+    var user =
+        repository
+            .findByEmail(request.getEmail())
+            .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+    var jwtToken = jwtService.generateToken(user);
+    var refreshToken = refreshTokenService.createRefreshToken(user.getEmail());
+
+    return AuthResponse.builder()
+        .accessToken(jwtToken)
+        .refreshToken(refreshToken.getToken())
+        .build();
+  }
+
+  @Override
+  public AuthResponse authenticateGoogle(GoogleAuthRequest request) throws IOException {
+    // 1. Exchange Auth Code for Tokens with Google
+    GoogleTokenResponse tokenResponse =
+        new GoogleAuthorizationCodeTokenRequest(
                 new NetHttpTransport(),
                 new GsonFactory(),
-                "https://oauth2.googleapis.com/token",
+                appConfig.getGoogle().getTokenUri(),
                 googleClientId,
                 googleClientSecret,
                 request.getAuthCode(),
-                "postmessage"
-        ).execute();
+                appConfig.getGoogle().getRedirectUri())
+            .execute();
 
-        String email = tokenResponse.parseIdToken().getPayload().getEmail();
-        String name = (String) tokenResponse.parseIdToken().getPayload().get("name");
+    String email = tokenResponse.parseIdToken().getPayload().getEmail();
+    String name = (String) tokenResponse.parseIdToken().getPayload().get("name");
 
-        // 2. Find existing user OR Create new Google user
-        User user = repository.findByEmail(email).orElseGet(() -> {
-            User newUser = new User();
-            newUser.setEmail(email);
-            newUser.setName(name);
-            newUser.setProvider(AuthProvider.GOOGLE);
-            return newUser;
-        });
+    // 2. Find existing user OR Create new Google user
+    User user =
+        repository
+            .findByEmail(email)
+            .orElseGet(
+                () -> {
+                  User newUser = new User();
+                  newUser.setEmail(email);
+                  newUser.setName(name);
+                  newUser.setProvider(AuthProvider.GOOGLE);
+                  return newUser;
+                });
 
-        // 3. Update Google Tokens (Link account / Update refresh token)
-        user.setGoogleAccessToken(tokenResponse.getAccessToken());
-        if (tokenResponse.getRefreshToken() != null) {
-            user.setGoogleRefreshToken(tokenResponse.getRefreshToken());
-        }
-        repository.save(user);
-
-        // 4. Generate App JWT
-        var jwtToken = jwtService.generateToken(user);
-        var refreshToken = refreshTokenService.createRefreshToken(user.getEmail());
-
-        return AuthResponse.builder()
-                .accessToken(jwtToken)
-                .refreshToken(refreshToken.getToken())
-                .build();
+    // 3. Update Google Tokens (Link account / Update refresh token)
+    user.setGoogleAccessToken(tokenResponse.getAccessToken());
+    if (tokenResponse.getRefreshToken() != null) {
+      user.setGoogleRefreshToken(tokenResponse.getRefreshToken());
     }
+    repository.save(user);
 
-    @Override
-    public AuthResponse refreshToken(RefreshTokenRequest request) {
-        return refreshTokenService.findByToken(request.getToken())
-                .map(refreshTokenService::verifyExpiration)
-                .map(RefreshToken::getUser)
-                .map(user -> {
-                    String accessToken = jwtService.generateToken(user);
-                    return AuthResponse.builder()
-                            .accessToken(accessToken)
-                            .refreshToken(request.getToken())
-                            .build();
-                })
-                .orElseThrow(() -> new TokenRefreshException("Refresh token is not in database!"));
-    }
+    // 4. Generate App JWT
+    var jwtToken = jwtService.generateToken(user);
+    var refreshToken = refreshTokenService.createRefreshToken(user.getEmail());
 
-    @Override
-    @Transactional
-    public void logout(String userEmail) {
-        var user = repository.findByEmail(userEmail)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+    return AuthResponse.builder()
+        .accessToken(jwtToken)
+        .refreshToken(refreshToken.getToken())
+        .build();
+  }
 
-        // Deletes the refresh token so the session cannot be renewed
-        refreshTokenRepository.deleteByUser(user);
-    }
+  @Override
+  public AuthResponse refreshToken(RefreshTokenRequest request) {
+    return refreshTokenService
+        .findByToken(request.getToken())
+        .map(refreshTokenService::verifyExpiration)
+        .map(RefreshToken::getUser)
+        .map(
+            user -> {
+              String accessToken = jwtService.generateToken(user);
+              return AuthResponse.builder()
+                  .accessToken(accessToken)
+                  .refreshToken(request.getToken())
+                  .build();
+            })
+        .orElseThrow(() -> new TokenRefreshException("Refresh token is not in database!"));
+  }
+
+  @Override
+  @Transactional
+  public void logout(String userEmail) {
+    var user =
+        repository
+            .findByEmail(userEmail)
+            .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+    // Deletes the refresh token so the session cannot be renewed
+    refreshTokenRepository.deleteByUser(user);
+  }
 }
