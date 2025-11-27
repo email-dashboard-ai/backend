@@ -121,6 +121,13 @@ docker compose down
 - 🗄️ **Database**: localhost:5432
 
 ---
+**Format code:**
+
+```bash
+mvn spotless:apply
+```
+
+---
 
 **Built with Passion**
 

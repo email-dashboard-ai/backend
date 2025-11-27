@@ -19,7 +19,7 @@ public class AppConfig {
 
   @Data
   public static class GoogleConfig {
-    private String tokenUri = "https://oauth2.googleapis.com/token";
-    private String redirectUri = "postmessage";
+    private String tokenUri;
+    private String redirectUri;
   }
 }

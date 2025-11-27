@@ -1,0 +1,66 @@
+#!/bin/bash
+
+# Exit on error
+set -e
+
+echo "=== AWS Lambda Deployment via AWS CLI ==="
+
+# Check if AWS CLI is installed
+if ! command -v aws &> /dev/null; then
+    echo "Error: AWS CLI is not installed."
+    exit 1
+fi
+
+# 1. Build the project
+echo "1. Building the project with Maven..."
+mvn clean package -DskipTests
+
+# 2. S3 Bucket Configuration
+echo ""
+echo "AWS CloudFormation requires an S3 bucket to store the deployment artifacts (JAR file)."
+read -p "Enter the name of an existing S3 bucket (or a new unique name to create one): " BUCKET_NAME
+
+if [ -z "$BUCKET_NAME" ]; then
+    echo "Error: Bucket name is required."
+    exit 1
+fi
+
+# Check if bucket exists
+if aws s3 ls "s3://$BUCKET_NAME" 2>&1 | grep -q 'NoSuchBucket'; then
+    echo "Bucket does not exist. Creating s3://$BUCKET_NAME..."
+    aws s3 mb "s3://$BUCKET_NAME"
+else
+    echo "Using existing bucket: s3://$BUCKET_NAME"
+fi
+
+# 3. Package the application
+echo ""
+echo "2. Packaging the application..."
+aws cloudformation package \
+    --template-file template.yaml \
+    --s3-bucket "$BUCKET_NAME" \
+    --output-template-file packaged.yaml
+
+# 4. Deploy the stack
+echo ""
+echo "3. Deploying the stack..."
+read -p "Enter a name for your CloudFormation stack [default: backend-stack]: " STACK_NAME
+STACK_NAME=${STACK_NAME:-backend-stack}
+
+echo "Deploying stack '$STACK_NAME'..."
+aws cloudformation deploy \
+    --template-file packaged.yaml \
+    --stack-name "$STACK_NAME" \
+    --capabilities CAPABILITY_IAM \
+    --parameter-overrides \
+        DatabaseUrl="YOUR_DATABASE_URL" \
+        DatabaseUser="YOUR_DATABASE_USER" \
+        DatabasePassword="YOUR_DATABASE_PASSWORD" \
+        JwtSecret="YOUR_JWT_SECRET" \
+        GoogleClientId="YOUR_GOOGLE_CLIENT_ID" \
+        GoogleClientSecret="YOUR_GOOGLE_CLIENT_SECRET"
+
+echo ""
+echo "=== Deployment Complete ==="
+echo "To get your Function URL, run:"
+echo "aws cloudformation describe-stacks --stack-name $STACK_NAME --query 'Stacks[0].Outputs'"

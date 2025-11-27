@@ -1,8 +1,10 @@
 package org.example.config;
 
+import java.util.Arrays;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.example.security.JwtAuthenticationFilter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -21,6 +23,9 @@ public class SecurityConfig {
 
   private final JwtAuthenticationFilter jwtAuthFilter;
   private final AuthenticationProvider authenticationProvider;
+
+  @Value("${app.cors.allowed-origins}")
+  private String allowedOrigins;
 
   private static final String[] WHITE_LIST_URL = {
     "/api/auth/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html"
@@ -47,7 +52,7 @@ public class SecurityConfig {
   @Bean
   public UrlBasedCorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration config = new CorsConfiguration();
-    config.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:5173"));
+    config.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
     config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
     config.setAllowedHeaders(List.of("*"));
     config.setAllowCredentials(true);

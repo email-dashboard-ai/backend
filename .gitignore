@@ -1,15 +1,29 @@
+# Environment Variables
+.env
+*.env.local
+
+# Deployment Scripts with Credentials
+deploy_with_aws_cli.sh
+
+# Maven Build Output
 target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
 
-### IntelliJ IDEA ###
+# AWS SAM / Lambda
+packaged.yaml
+.aws-sam/
+samconfig.toml
+
+# IDE - IntelliJ IDEA
 .idea/
 *.iws
 *.iml
 *.ipr
+out/
 
-### Eclipse ###
+# IDE - Eclipse
 .apt_generated
 .classpath
 .factorypath
@@ -18,19 +32,45 @@ target/
 .springBeans
 .sts4-cache
 
-### NetBeans ###
+# IDE - VS Code
+.vscode/
+*.code-workspace
+
+# IDE - NetBeans
 /nbproject/private/
 /nbbuild/
 /dist/
 /nbdist/
 /.nb-gradle/
 build/
-!**/src/main/**/build/
-!**/src/test/**/build/
 
-### VS Code ###
-.vscode/
+# OS Files
+.DS_Store
+Thumbs.db
+*~
 
-### Mac OS ###
-.DS_Store'=
-.env
+# Logs
+*.log
+logs/
+
+# Temporary Files
+*.tmp
+*.bak
+*.swp
+*.swo
+*~.nib
+
+# Spring Boot
+spring-boot-devtools.properties
+
+# Compiled class files
+*.class
+
+# Package Files
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar

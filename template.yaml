@@ -1,0 +1,70 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  backend
+  Spring Boot 3 Backend for AWS Lambda
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 2048
+    Runtime: java21
+    Architectures:
+      - x86_64
+    Environment:
+      Variables:
+        SPRING_DATASOURCE_URL: !Ref DatabaseUrl
+        SPRING_DATASOURCE_USERNAME: !Ref DatabaseUser
+        SPRING_DATASOURCE_PASSWORD: !Ref DatabasePassword
+        JWT_SECRET: !Ref JwtSecret
+        GOOGLE_CLIENT_ID: !Ref GoogleClientId
+        GOOGLE_CLIENT_SECRET: !Ref GoogleClientSecret
+
+Parameters:
+  DatabaseUrl:
+    Type: String
+    Description: JDBC URL for the database
+  DatabaseUser:
+    Type: String
+    Description: Database username
+  DatabasePassword:
+    Type: String
+    Description: Database password
+  JwtSecret:
+    Type: String
+    Description: JWT Secret Key
+    Default: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+  GoogleClientId:
+    Type: String
+    Description: Google Client ID
+    Default: placeholder
+  GoogleClientSecret:
+    Type: String
+    Description: Google Client Secret
+    Default: placeholder
+
+Resources:
+  BackendFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: target/backend.jar
+      Handler: org.example.backend.StreamLambdaHandler::handleRequest
+      # SnapStart:
+      #   ApplyOn: PublishedVersions
+      FunctionUrlConfig:
+        AuthType: NONE
+        Cors:
+          AllowOrigins:
+            - "*"
+          AllowMethods:
+            - "*"
+          AllowHeaders:
+            - "*"
+
+Outputs:
+  BackendFunctionUrl:
+    Description: Function URL for application
+    Value: !GetAtt BackendFunctionUrl.FunctionUrl
+  BackendFunctionArn:
+    Description: Backend Lambda Function ARN
+    Value: !GetAtt BackendFunction.Arn
