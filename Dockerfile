@@ -1,5 +1,5 @@
 # STAGE 1: Build the Application
-FROM eclipse-temurin:22-jdk AS build
+FROM eclipse-temurin:21-jdk AS build
 WORKDIR /app
 
 # Install Maven
@@ -14,7 +14,7 @@ COPY . .
 RUN mvn clean package -DskipTests
 
 # STAGE 2: Run the Application
-FROM eclipse-temurin:22-jre-alpine
+FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
 # SECURITY: Create a non-root group and user

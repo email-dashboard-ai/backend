@@ -6,8 +6,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.example.dto.response.ResponseWrapper;
 import org.example.service.EmailService;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -25,8 +25,8 @@ public class EmailController {
 
     @Operation(summary = "Get Mailboxes", description = "Returns a list of labels (folders) like INBOX, SENT, etc.")
     @GetMapping("/labels")
-    public ResponseEntity<List<Label>> getLabels(@AuthenticationPrincipal UserDetails userDetails) {
-        return ResponseEntity.ok(emailService.getLabels(userDetails.getUsername()));
+    public ResponseWrapper<List<Label>> getLabels(@AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseWrapper.success(emailService.getLabels(userDetails.getUsername()), "Labels fetched successfully");
     }
 
     @Operation(
@@ -35,22 +35,20 @@ public class EmailController {
                     "For Mock users, this supports pagination. For Google users, it maps 'limit' to maxResults."
     )
     @GetMapping("/list/{labelId}")
-    public ResponseEntity<List<Message>> getEmails(
+    public ResponseWrapper<List<Message>> getEmails(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable String labelId,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int limit
     ) {
-        return ResponseEntity.ok(
-                emailService.getEmails(userDetails.getUsername(), labelId, page, limit)
-        );
+        return ResponseWrapper.success(emailService.getEmails(userDetails.getUsername(), labelId, page, limit), "Emails fetched successfully");
     }
 
     @Operation(summary = "Get Email Detail", description = "Returns the full content of a specific email by ID.")
     @GetMapping("/{id}")
-    public ResponseEntity<Message> getEmailDetail(
+    public ResponseWrapper<Message> getEmailDetail(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable String id) {
-        return ResponseEntity.ok(emailService.getEmailDetails(userDetails.getUsername(), id));
+        return ResponseWrapper.success(emailService.getEmailDetails(userDetails.getUsername(), id), "Email details fetched successfully");
     }
 }

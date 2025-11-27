@@ -1,7 +1,6 @@
 package org.example.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,11 +9,14 @@ import org.example.dto.request.GoogleAuthRequest;
 import org.example.dto.request.RefreshTokenRequest;
 import org.example.dto.request.RegisterRequest;
 import org.example.dto.response.AuthResponse;
+import org.example.dto.response.ResponseWrapper;
 import org.example.service.AuthenticationService;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @Slf4j
 @RestController
@@ -27,30 +29,26 @@ public class AuthController {
 
     @Operation(summary = "Register a new user", description = "Creates a new local user account and returns JWT tokens.")
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest request) {
-        return ResponseEntity.ok(service.register(request));
+    public ResponseWrapper<AuthResponse> register(@RequestBody RegisterRequest request) {
+        return ResponseWrapper.success(service.register(request), "User registered successfully");
     }
 
     @Operation(summary = "Login with Email/Password", description = "Authenticates a local user and returns JWT tokens.")
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> authenticate(@RequestBody AuthRequest request) {
-        return ResponseEntity.ok(service.authenticate(request));
+    public ResponseWrapper<AuthResponse> authenticate(@RequestBody AuthRequest request) {
+        return ResponseWrapper.success(service.authenticate(request), "Login successful");
     }
 
     @Operation(summary = "Login with Google", description = "Exchanges a Google Auth Code for JWT tokens and setup offline access.")
     @PostMapping("/google")
-    public ResponseEntity<AuthResponse> googleAuth(@RequestBody GoogleAuthRequest request) {
-        try {
-            return ResponseEntity.ok(service.authenticateGoogle(request));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
-        }
+    public ResponseWrapper<AuthResponse> googleAuth(@RequestBody GoogleAuthRequest request) throws Exception {
+        return ResponseWrapper.success(service.authenticateGoogle(request), "Google login successful");
     }
 
     @Operation(summary = "Refresh Access Token", description = "Uses a valid Refresh Token to obtain a new Access Token.")
     @PostMapping("/refresh-token")
-    public ResponseEntity<AuthResponse> refreshToken(@RequestBody RefreshTokenRequest request) {
-        return ResponseEntity.ok(service.refreshToken(request));
+    public ResponseWrapper<AuthResponse> refreshToken(@RequestBody RefreshTokenRequest request) {
+        return ResponseWrapper.success(service.refreshToken(request), "Token refreshed successfully");
     }
 
     @Operation(
@@ -59,7 +57,7 @@ public class AuthController {
                     "Frontend should listen for 200 OK and then trigger 'storage' event or BroadcastChannel to log out other tabs."
     )
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseWrapper<Void> logout(@AuthenticationPrincipal UserDetails userDetails) {
         // userDetails comes from the JWT Filter. If token is invalid, Filter blocks it before reaching here.
         if (userDetails != null) {
             log.info("Logging out user: {}", userDetails.getUsername());
@@ -68,6 +66,6 @@ public class AuthController {
         else {
             log.warn("Logout attempted without valid authentication.");
         }
-        return ResponseEntity.ok().build();
+        return ResponseWrapper.success(null, "Logout successful");
     }
 }
