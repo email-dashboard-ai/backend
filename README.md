@@ -30,7 +30,7 @@ A production-ready, secure email management backend service built with Spring Bo
 - **BCrypt Password Hashing**: Industry-standard password encryption
 - **OAuth 2.0 Compliance**: Secure third-party authentication
 - **CORS Configuration**: Controlled cross-origin resource sharing
-- **API Rate Limiting**: Protection against abuse and DDoS attacks
+
 
 ### 🏗️ **Modern Tech Stack**
 
@@ -65,7 +65,7 @@ This application implements a sophisticated **"Dual Token Architecture"** that s
 
 - **Docker & Docker Compose** - Container orchestration
 - **Java 17+** - (Optional for local development)
-- **Node.js 16+** - Frontend development
+
 - **Google Cloud Project** - Gmail API access
 
 ### 1. 🔧 Environment Setup
@@ -128,13 +128,13 @@ CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
 
 ```bash
 # Build and start all services
-docker-compose --env-file .env up --build -d
+docker compose up --build -d
 
 # View logs
-docker-compose logs -f backend
+docker compose logs -f backend
 
 # Stop services
-docker-compose down
+docker compose down
 ```
 
 **Service URLs:**
@@ -235,19 +235,7 @@ docker-compose down
 - **Security Tests**: Authentication and authorization flows
 - **Mock Data Tests**: Email data simulation
 
-## 📊 Monitoring & Observability
 
-### Health Checks
-
-- **Application Health**: `/actuator/health`
-- **Database Connectivity**: `/actuator/health/db`
-- **External APIs**: `/actuator/health/gmail-api`
-
-### Metrics
-
-- **Performance Metrics**: Request timing and throughput
-- **Business Metrics**: User registrations, email operations
-- **Error Tracking**: Exception rates and types
 
 ### Logging
 
@@ -299,17 +287,13 @@ google:
 - **Query Optimization**: Indexed columns and efficient queries
 - **Lazy Loading**: JPA relationships optimized for performance
 
-### Caching Strategy
 
-- **Redis Integration**: Session and frequently accessed data
-- **Application-Level Caching**: @Cacheable annotations
-- **HTTP Caching**: ETag and Last-Modified headers
 
 ### API Performance
 
 - **Pagination**: Efficient data loading for large datasets
 - **Async Processing**: Non-blocking email operations
-- **Rate Limiting**: Prevent API abuse and ensure fair usage
+
 
 ## 🚀 Deployment
 
@@ -346,15 +330,16 @@ LOG_LEVEL=INFO
 
 ### Code Quality
 
+
+
+### Code Quality
+
 ```bash
 # Format code
 ./mvnw spotless:apply
 
-# Static analysis
-./mvnw spotbugs:check
-
-# Dependency check
-./mvnw versions:display-dependency-updates
+# Check code format
+./mvnw spotless:check
 ```
 
 ### Git Workflow
