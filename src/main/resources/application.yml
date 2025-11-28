@@ -12,7 +12,7 @@ server:
 # Uses "db" as default host (Docker service name), "localhost" as fallback
 spring:
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:emaildb}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:emaildb}${DB_PARAMS:}
     username: ${DB_USER:admin}
     password: ${DB_PASSWORD:secure_db_password}
   jpa:

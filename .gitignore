@@ -1,10 +1,7 @@
 # Environment Variables
 .env
+.env.prod
 *.env.local
-
-# Deployment Scripts with Credentials
-deploy_with_aws_cli.sh
-
 # Maven Build Output
 target/
 !.mvn/wrapper/maven-wrapper.jar

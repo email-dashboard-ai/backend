@@ -94,7 +94,7 @@ cp .env.example .env
 
    - Add authorized domains
    - Set scopes (APIs & Services > OAuth Consent Screen > Data Access): `https://www.googleapis.com/auth/gmail.readonly`
-   - Add test users (APIs & Services > OAuth Consent Screen > Data Access - for development)
+   - Add test users
 
 4. **Create OAuth 2.0 Credentials**
    - Application type: Web application
