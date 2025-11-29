@@ -72,4 +72,22 @@ public class EmailServiceImpl implements EmailService {
     User user = userRepository.findByEmail(email).orElseThrow();
     getStrategy(user).untrashEmail(user, messageId);
   }
+
+  @Override
+  public void batchDeleteEmails(String email, List<String> messageIds) {
+    User user = userRepository.findByEmail(email).orElseThrow();
+    getStrategy(user).batchDeleteEmails(user, messageIds);
+  }
+
+  @Override
+  public void batchMarkAsRead(String email, List<String> messageIds) {
+    User user = userRepository.findByEmail(email).orElseThrow();
+    getStrategy(user).batchMarkAsRead(user, messageIds);
+  }
+
+  @Override
+  public void batchMarkAsUnread(String email, List<String> messageIds) {
+    User user = userRepository.findByEmail(email).orElseThrow();
+    getStrategy(user).batchMarkAsUnread(user, messageIds);
+  }
 }

@@ -20,4 +20,10 @@ public interface EmailService {
   void deleteEmail(String email, String messageId);
 
   void untrashEmail(String email, String messageId);
+
+  void batchDeleteEmails(String email, List<String> messageIds);
+
+  void batchMarkAsRead(String email, List<String> messageIds);
+
+  void batchMarkAsUnread(String email, List<String> messageIds);
 }

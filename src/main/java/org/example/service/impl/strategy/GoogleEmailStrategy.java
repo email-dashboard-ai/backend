@@ -347,4 +347,46 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
       throw new RuntimeException(e);
     }
   }
+
+  @Override
+  public void batchDeleteEmails(User user, List<String> messageIds) {
+    try {
+      Gmail service = getGmailClient(user);
+      com.google.api.services.gmail.model.BatchModifyMessagesRequest batchRequest =
+          new com.google.api.services.gmail.model.BatchModifyMessagesRequest()
+              .setIds(messageIds)
+              .setAddLabelIds(java.util.Collections.singletonList("TRASH"));
+      service.users().messages().batchModify("me", batchRequest).execute();
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to batch delete emails", e);
+    }
+  }
+
+  @Override
+  public void batchMarkAsRead(User user, List<String> messageIds) {
+    try {
+      Gmail service = getGmailClient(user);
+      com.google.api.services.gmail.model.BatchModifyMessagesRequest batchRequest =
+          new com.google.api.services.gmail.model.BatchModifyMessagesRequest()
+              .setIds(messageIds)
+              .setRemoveLabelIds(java.util.Collections.singletonList("UNREAD"));
+      service.users().messages().batchModify("me", batchRequest).execute();
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to batch mark emails as read", e);
+    }
+  }
+
+  @Override
+  public void batchMarkAsUnread(User user, List<String> messageIds) {
+    try {
+      Gmail service = getGmailClient(user);
+      com.google.api.services.gmail.model.BatchModifyMessagesRequest batchRequest =
+          new com.google.api.services.gmail.model.BatchModifyMessagesRequest()
+              .setIds(messageIds)
+              .setAddLabelIds(java.util.Collections.singletonList("UNREAD"));
+      service.users().messages().batchModify("me", batchRequest).execute();
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to batch mark emails as unread", e);
+    }
+  }
 }

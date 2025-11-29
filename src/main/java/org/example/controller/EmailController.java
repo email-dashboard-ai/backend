@@ -104,4 +104,26 @@ public class EmailController {
     emailService.untrashEmail(userDetails.getUsername(), id);
     return ResponseWrapper.success(null, "Email restored from trash");
   }
+
+  @Operation(summary = "Batch Delete Emails", description = "Moves multiple emails to trash.")
+  @PostMapping("/batch/delete")
+  public ResponseWrapper<Void> batchDeleteEmails(
+      @AuthenticationPrincipal UserDetails userDetails, @RequestBody List<String> ids) {
+    emailService.batchDeleteEmails(userDetails.getUsername(), ids);
+    return ResponseWrapper.success(null, "Emails moved to trash");
+  }
+
+  @Operation(summary = "Batch Mark Read/Unread", description = "Marks multiple emails as read or unread.")
+  @PostMapping("/batch/status")
+  public ResponseWrapper<Void> batchUpdateStatus(
+      @AuthenticationPrincipal UserDetails userDetails,
+      @RequestBody List<String> ids,
+      @RequestParam boolean isRead) {
+    if (isRead) {
+      emailService.batchMarkAsRead(userDetails.getUsername(), ids);
+    } else {
+      emailService.batchMarkAsUnread(userDetails.getUsername(), ids);
+    }
+    return ResponseWrapper.success(null, "Emails status updated");
+  }
 }

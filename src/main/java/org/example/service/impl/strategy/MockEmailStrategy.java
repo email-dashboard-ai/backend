@@ -59,4 +59,19 @@ public class MockEmailStrategy implements EmailProviderStrategy {
   public void untrashEmail(User user, String messageId) {
     // Mock implementation - no-op
   }
+
+  @Override
+  public void batchDeleteEmails(User user, List<String> messageIds) {
+    // Mock implementation - no-op
+  }
+
+  @Override
+  public void batchMarkAsRead(User user, List<String> messageIds) {
+    // Mock implementation - no-op
+  }
+
+  @Override
+  public void batchMarkAsUnread(User user, List<String> messageIds) {
+    // Mock implementation - no-op
+  }
 }

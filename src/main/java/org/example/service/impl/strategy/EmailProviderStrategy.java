@@ -23,5 +23,11 @@ public interface EmailProviderStrategy {
 
   void untrashEmail(User user, String messageId);
 
+  void batchDeleteEmails(User user, List<String> messageIds);
+
+  void batchMarkAsRead(User user, List<String> messageIds);
+
+  void batchMarkAsUnread(User user, List<String> messageIds);
+
   AuthProvider getSupportedProvider();
 }
