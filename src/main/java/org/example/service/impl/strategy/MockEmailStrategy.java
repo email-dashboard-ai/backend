@@ -34,4 +34,29 @@ public class MockEmailStrategy implements EmailProviderStrategy {
   public AuthProvider getSupportedProvider() {
     return AuthProvider.LOCAL;
   }
+
+  @Override
+  public void markAsRead(User user, String messageId) {
+    // Mock implementation - no-op
+  }
+
+  @Override
+  public void markAsUnread(User user, String messageId) {
+    // Mock implementation - no-op
+  }
+
+  @Override
+  public void toggleStar(User user, String messageId, boolean starred) {
+    // Mock implementation - no-op
+  }
+
+  @Override
+  public void deleteEmail(User user, String messageId) {
+    // Mock implementation - no-op
+  }
+
+  @Override
+  public void untrashEmail(User user, String messageId) {
+    // Mock implementation - no-op
+  }
 }

@@ -47,4 +47,29 @@ public class EmailServiceImpl implements EmailService {
     User user = userRepository.findByEmail(email).orElseThrow();
     return getStrategy(user).getEmailDetails(user, messageId);
   }
+
+  public void markAsRead(String email, String messageId) {
+    User user = userRepository.findByEmail(email).orElseThrow();
+    getStrategy(user).markAsRead(user, messageId);
+  }
+
+  public void markAsUnread(String email, String messageId) {
+    User user = userRepository.findByEmail(email).orElseThrow();
+    getStrategy(user).markAsUnread(user, messageId);
+  }
+
+  public void toggleStar(String email, String messageId, boolean starred) {
+    User user = userRepository.findByEmail(email).orElseThrow();
+    getStrategy(user).toggleStar(user, messageId, starred);
+  }
+
+  public void deleteEmail(String email, String messageId) {
+    User user = userRepository.findByEmail(email).orElseThrow();
+    getStrategy(user).deleteEmail(user, messageId);
+  }
+
+  public void untrashEmail(String email, String messageId) {
+    User user = userRepository.findByEmail(email).orElseThrow();
+    getStrategy(user).untrashEmail(user, messageId);
+  }
 }

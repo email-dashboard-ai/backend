@@ -13,5 +13,15 @@ public interface EmailProviderStrategy {
 
   Message getEmailDetails(User user, String messageId);
 
+  void markAsRead(User user, String messageId);
+
+  void markAsUnread(User user, String messageId);
+
+  void toggleStar(User user, String messageId, boolean starred);
+
+  void deleteEmail(User user, String messageId);
+
+  void untrashEmail(User user, String messageId);
+
   AuthProvider getSupportedProvider();
 }

@@ -62,4 +62,46 @@ public class EmailController {
         emailService.getEmailDetails(userDetails.getUsername(), id),
         "Email details fetched successfully");
   }
+
+  @Operation(summary = "Mark Email as Read", description = "Marks an email as read.")
+  @PostMapping("/{id}/read")
+  public ResponseWrapper<Void> markAsRead(
+      @AuthenticationPrincipal UserDetails userDetails, @PathVariable String id) {
+    emailService.markAsRead(userDetails.getUsername(), id);
+    return ResponseWrapper.success(null, "Email marked as read");
+  }
+
+  @Operation(summary = "Mark Email as Unread", description = "Marks an email as unread.")
+  @PostMapping("/{id}/unread")
+  public ResponseWrapper<Void> markAsUnread(
+      @AuthenticationPrincipal UserDetails userDetails, @PathVariable String id) {
+    emailService.markAsUnread(userDetails.getUsername(), id);
+    return ResponseWrapper.success(null, "Email marked as unread");
+  }
+
+  @Operation(summary = "Toggle Star", description = "Adds or removes star from an email.")
+  @PostMapping("/{id}/star")
+  public ResponseWrapper<Void> toggleStar(
+      @AuthenticationPrincipal UserDetails userDetails,
+      @PathVariable String id,
+      @RequestParam boolean starred) {
+    emailService.toggleStar(userDetails.getUsername(), id, starred);
+    return ResponseWrapper.success(null, starred ? "Email starred" : "Email unstarred");
+  }
+
+  @Operation(summary = "Delete Email", description = "Moves an email to trash.")
+  @DeleteMapping("/{id}")
+  public ResponseWrapper<Void> deleteEmail(
+      @AuthenticationPrincipal UserDetails userDetails, @PathVariable String id) {
+    emailService.deleteEmail(userDetails.getUsername(), id);
+    return ResponseWrapper.success(null, "Email moved to trash");
+  }
+
+  @Operation(summary = "Untrash Email", description = "Restores an email from trash.")
+  @PostMapping("/{id}/untrash")
+  public ResponseWrapper<Void> untrashEmail(
+      @AuthenticationPrincipal UserDetails userDetails, @PathVariable String id) {
+    emailService.untrashEmail(userDetails.getUsername(), id);
+    return ResponseWrapper.success(null, "Email restored from trash");
+  }
 }
