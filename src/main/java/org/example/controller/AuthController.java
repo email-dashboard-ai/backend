@@ -9,7 +9,7 @@ import org.example.dto.request.GoogleAuthRequest;
 import org.example.dto.request.RefreshTokenRequest;
 import org.example.dto.request.RegisterRequest;
 import org.example.dto.response.AuthResponse;
-import org.example.dto.response.ResponseWrapper;
+import org.example.helper.ResponseWrapper;
 import org.example.service.AuthenticationService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;

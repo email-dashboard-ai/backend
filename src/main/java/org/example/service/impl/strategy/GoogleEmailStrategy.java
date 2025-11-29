@@ -4,6 +4,7 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.googleapis.auth.oauth2.GoogleRefreshTokenRequest;
 import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.gmail.Gmail;
@@ -15,6 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.example.enums.AuthProvider;
+import org.example.exception.GmailServiceException;
 import org.example.model.User;
 import org.example.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -91,17 +93,19 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
   public List<Label> getLabels(User user) {
     try {
       return executeGetLabels(user);
-    } catch (Exception e) {
-      // If error is 401 Unauthorized, refresh and retry once
-      if (e.getMessage().contains("401") || e.getMessage().contains("Invalid Credentials")) {
+    } catch (GoogleJsonResponseException e) {
+      if (e.getStatusCode() == 401) {
         try {
           refreshAccessToken(user);
           return executeGetLabels(user); // Retry with new token from updated user object
         } catch (IOException | GeneralSecurityException ioException) {
           throw new RuntimeException("Failed to refresh token", ioException);
         }
+      } else {
+        throw new GmailServiceException(e);
       }
-      throw new RuntimeException("Gmail API Error", e);
+    } catch (Exception e) {
+      throw new RuntimeException("Unexpected Error", e);
     }
   }
 
@@ -115,8 +119,8 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
   public List<Message> getEmails(User user, String labelId, int page, int limit) {
     try {
       return executeGetEmails(user, labelId, limit);
-    } catch (Exception e) {
-      if (e.getMessage().contains("401") || e.getMessage().contains("Invalid Credentials")) {
+    } catch (GoogleJsonResponseException e) {
+      if (e.getStatusCode() == 401) {
         try {
           refreshAccessToken(user);
           return executeGetEmails(user, labelId, limit);
@@ -125,8 +129,11 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
         } catch (GeneralSecurityException ex) {
           throw new RuntimeException(ex);
         }
+      } else {
+        throw new GmailServiceException(e);
       }
-      throw new RuntimeException("Gmail API Error", e);
+    } catch (Exception e) {
+      throw new RuntimeException("Unexpected Error", e);
     }
   }
 
@@ -181,26 +188,25 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
   public Message getEmailDetails(User user, String messageId) {
     try {
       return executeGetDetail(user, messageId);
-    } catch (Exception e) {
-      if (e.getMessage().contains("401") || e.getMessage().contains("Invalid Credentials")) {
+    } catch (GoogleJsonResponseException e) {
+      if (e.getStatusCode() == 401) {
         try {
           refreshAccessToken(user);
           return executeGetDetail(user, messageId);
         } catch (IOException ioException) {
           throw new RuntimeException("Failed to refresh token", ioException);
         }
+      } else {
+        throw new GmailServiceException(e);
       }
-      throw e;
+    } catch (Exception e) {
+      throw new RuntimeException("Unexpected Error", e);
     }
   }
 
-  private Message executeGetDetail(User user, String messageId) {
-    try {
-      Gmail service = getGmailClient(user);
-      return service.users().messages().get("me", messageId).execute();
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
+  private Message executeGetDetail(User user, String messageId) throws IOException {
+    Gmail service = getGmailClient(user);
+    return service.users().messages().get("me", messageId).execute();
   }
 
   @Override
@@ -212,140 +218,135 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
   public void markAsRead(User user, String messageId) {
     try {
       executeMarkAsRead(user, messageId);
-    } catch (Exception e) {
-      if (e.getMessage().contains("401") || e.getMessage().contains("Invalid Credentials")) {
+    } catch (GoogleJsonResponseException e) {
+      if (e.getStatusCode() == 401) {
         try {
           refreshAccessToken(user);
           executeMarkAsRead(user, messageId);
         } catch (IOException ioException) {
           throw new RuntimeException("Failed to refresh token", ioException);
         }
+      } else {
+        throw new GmailServiceException(e);
       }
-      throw new RuntimeException("Gmail API Error", e);
+    } catch (Exception e) {
+      throw new RuntimeException("Unexpected Error", e);
     }
   }
 
-  private void executeMarkAsRead(User user, String messageId) {
-    try {
-      Gmail service = getGmailClient(user);
-      var modifyRequest = new com.google.api.services.gmail.model.ModifyMessageRequest();
-      modifyRequest.setRemoveLabelIds(List.of("UNREAD"));
-      service.users().messages().modify("me", messageId, modifyRequest).execute();
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
+  private void executeMarkAsRead(User user, String messageId) throws IOException {
+    Gmail service = getGmailClient(user);
+    var modifyRequest = new com.google.api.services.gmail.model.ModifyMessageRequest();
+    modifyRequest.setRemoveLabelIds(List.of("UNREAD"));
+    service.users().messages().modify("me", messageId, modifyRequest).execute();
   }
 
   @Override
   public void markAsUnread(User user, String messageId) {
     try {
       executeMarkAsUnread(user, messageId);
-    } catch (Exception e) {
-      if (e.getMessage().contains("401") || e.getMessage().contains("Invalid Credentials")) {
+    } catch (GoogleJsonResponseException e) {
+      if (e.getStatusCode() == 401) {
         try {
           refreshAccessToken(user);
           executeMarkAsUnread(user, messageId);
         } catch (IOException ioException) {
           throw new RuntimeException("Failed to refresh token", ioException);
         }
+      } else {
+        throw new GmailServiceException(e);
       }
-      throw new RuntimeException("Gmail API Error", e);
+    } catch (Exception e) {
+      throw new RuntimeException("Unexpected Error", e);
     }
   }
 
-  private void executeMarkAsUnread(User user, String messageId) {
-    try {
-      Gmail service = getGmailClient(user);
-      var modifyRequest = new com.google.api.services.gmail.model.ModifyMessageRequest();
-      modifyRequest.setAddLabelIds(List.of("UNREAD"));
-      service.users().messages().modify("me", messageId, modifyRequest).execute();
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
+  private void executeMarkAsUnread(User user, String messageId) throws IOException {
+    Gmail service = getGmailClient(user);
+    var modifyRequest = new com.google.api.services.gmail.model.ModifyMessageRequest();
+    modifyRequest.setAddLabelIds(List.of("UNREAD"));
+    service.users().messages().modify("me", messageId, modifyRequest).execute();
   }
 
   @Override
   public void toggleStar(User user, String messageId, boolean starred) {
     try {
       executeToggleStar(user, messageId, starred);
-    } catch (Exception e) {
-      if (e.getMessage().contains("401") || e.getMessage().contains("Invalid Credentials")) {
+    } catch (GoogleJsonResponseException e) {
+      if (e.getStatusCode() == 401) {
         try {
           refreshAccessToken(user);
           executeToggleStar(user, messageId, starred);
         } catch (IOException ioException) {
           throw new RuntimeException("Failed to refresh token", ioException);
         }
+      } else {
+        throw new GmailServiceException(e);
       }
-      throw new RuntimeException("Gmail API Error", e);
+    } catch (Exception e) {
+      throw new RuntimeException("Unexpected Error", e);
     }
   }
 
-  private void executeToggleStar(User user, String messageId, boolean starred) {
-    try {
-      Gmail service = getGmailClient(user);
-      var modifyRequest = new com.google.api.services.gmail.model.ModifyMessageRequest();
-      if (starred) {
-        modifyRequest.setAddLabelIds(List.of("STARRED"));
-      } else {
-        modifyRequest.setRemoveLabelIds(List.of("STARRED"));
-      }
-      service.users().messages().modify("me", messageId, modifyRequest).execute();
-    } catch (Exception e) {
-      throw new RuntimeException(e);
+  private void executeToggleStar(User user, String messageId, boolean starred) throws IOException {
+    Gmail service = getGmailClient(user);
+    var modifyRequest = new com.google.api.services.gmail.model.ModifyMessageRequest();
+    if (starred) {
+      modifyRequest.setAddLabelIds(List.of("STARRED"));
+    } else {
+      modifyRequest.setRemoveLabelIds(List.of("STARRED"));
     }
+    service.users().messages().modify("me", messageId, modifyRequest).execute();
   }
 
   @Override
   public void deleteEmail(User user, String messageId) {
     try {
       executeDeleteEmail(user, messageId);
-    } catch (Exception e) {
-      if (e.getMessage().contains("401") || e.getMessage().contains("Invalid Credentials")) {
+    } catch (GoogleJsonResponseException e) {
+      if (e.getStatusCode() == 401) {
         try {
           refreshAccessToken(user);
           executeDeleteEmail(user, messageId);
         } catch (IOException ioException) {
           throw new RuntimeException("Failed to refresh token", ioException);
         }
+      } else {
+        throw new GmailServiceException(e);
       }
-      throw new RuntimeException("Gmail API Error", e);
+    } catch (Exception e) {
+      throw new RuntimeException("Unexpected Error", e);
     }
   }
 
-  private void executeDeleteEmail(User user, String messageId) {
-    try {
-      Gmail service = getGmailClient(user);
-      service.users().messages().trash("me", messageId).execute();
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
+  private void executeDeleteEmail(User user, String messageId) throws IOException {
+    Gmail service = getGmailClient(user);
+    service.users().messages().trash("me", messageId).execute();
   }
 
   @Override
   public void untrashEmail(User user, String messageId) {
     try {
       executeUntrashEmail(user, messageId);
-    } catch (Exception e) {
-      if (e.getMessage().contains("401") || e.getMessage().contains("Invalid Credentials")) {
+    } catch (GoogleJsonResponseException e) {
+      if (e.getStatusCode() == 401) {
         try {
           refreshAccessToken(user);
           executeUntrashEmail(user, messageId);
         } catch (IOException ioException) {
           throw new RuntimeException("Failed to refresh token", ioException);
         }
+      } else {
+        throw new GmailServiceException(e);
       }
-      throw new RuntimeException("Gmail API Error", e);
+    } catch (Exception e) {
+      throw new RuntimeException("Unexpected Error", e);
     }
   }
 
-  private void executeUntrashEmail(User user, String messageId) {
-    try {
-      Gmail service = getGmailClient(user);
-      service.users().messages().untrash("me", messageId).execute();
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
+  private void executeUntrashEmail(User user, String messageId) throws IOException {
+    Gmail service = getGmailClient(user);
+    service.users().messages().untrash("me", messageId).execute();
   }
 
   @Override

@@ -8,7 +8,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.example.config.AppConfig;
-import org.example.dto.response.ResponseWrapper;
+import org.example.helper.ResponseWrapper;
 import org.example.service.EmailService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;

@@ -1,4 +1,4 @@
-package org.example.dto.response;
+package org.example.helper;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -32,8 +32,5 @@ public class ResponseWrapper<T> {
         .message(message != null ? message : errorCode.getMessage())
         .build();
   }
-
-  public static <T> ResponseWrapper<T> error(ErrorCode errorCode) {
-    return error(errorCode, null);
-  }
 }
+ 
