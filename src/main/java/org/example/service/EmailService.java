@@ -10,4 +10,20 @@ public interface EmailService {
   List<Message> getEmails(String email, String labelId, int page, int limit);
 
   Message getEmailDetails(String email, String messageId);
+
+  void markAsRead(String email, String messageId);
+
+  void markAsUnread(String email, String messageId);
+
+  void toggleStar(String email, String messageId, boolean starred);
+
+  void deleteEmail(String email, String messageId);
+
+  void untrashEmail(String email, String messageId);
+
+  void batchDeleteEmails(String email, List<String> messageIds);
+
+  void batchMarkAsRead(String email, List<String> messageIds);
+
+  void batchMarkAsUnread(String email, List<String> messageIds);
 }
