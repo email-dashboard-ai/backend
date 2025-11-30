@@ -5,6 +5,7 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleRefreshTokenRequest;
 import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.gmail.Gmail;
@@ -17,6 +18,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.example.enums.AuthProvider;
 import org.example.exception.GmailServiceException;
+import org.example.dto.response.EmailPageResponse;
 import org.example.model.User;
 import org.example.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -95,6 +97,8 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
       return executeGetLabels(user);
     } catch (GoogleJsonResponseException e) {
       if (e.getStatusCode() == 401) {
+    } catch (GoogleJsonResponseException e) {
+      if (e.getStatusCode() == 401) {
         try {
           refreshAccessToken(user);
           return executeGetLabels(user); // Retry with new token from updated user object
@@ -103,7 +107,11 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
         }
       } else {
         throw new GmailServiceException(e);
+      } else {
+        throw new GmailServiceException(e);
       }
+    } catch (Exception e) {
+      throw new RuntimeException("Unexpected Error", e);
     } catch (Exception e) {
       throw new RuntimeException("Unexpected Error", e);
     }
@@ -116,14 +124,14 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
   }
 
   @Override
-  public List<Message> getEmails(User user, String labelId, int page, int limit) {
+  public EmailPageResponse getEmails(User user, String labelId, String pageToken, int limit) {
     try {
       return executeGetEmails(user, labelId, limit);
     } catch (GoogleJsonResponseException e) {
       if (e.getStatusCode() == 401) {
         try {
           refreshAccessToken(user);
-          return executeGetEmails(user, labelId, limit);
+          return executeGetEmails(user, labelId, pageToken, limit);
         } catch (IOException ioException) {
           throw new RuntimeException("Failed to refresh token", ioException);
         } catch (GeneralSecurityException ex) {
@@ -131,31 +139,42 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
         }
       } else {
         throw new GmailServiceException(e);
+      } else {
+        throw new GmailServiceException(e);
       }
+    } catch (Exception e) {
+      throw new RuntimeException("Unexpected Error", e);
     } catch (Exception e) {
       throw new RuntimeException("Unexpected Error", e);
     }
   }
 
-  private List<Message> executeGetEmails(User user, String labelId, int limit)
+  private EmailPageResponse executeGetEmails(User user, String labelId, String pageToken, int limit)
       throws IOException, java.security.GeneralSecurityException {
     Gmail service = getGmailClient(user);
 
     // Convert user provided limit to Long
     long maxResults = (long) limit;
 
-    var response =
-        service
+    var listRequest = service
             .users()
             .messages()
             .list("me")
             .setLabelIds(List.of(labelId))
-            .setMaxResults(maxResults)
-            .execute();
+            .setMaxResults(maxResults);
+
+    if (pageToken != null && !pageToken.isEmpty()) {
+      listRequest.setPageToken(pageToken);
+    }
+
+    var response = listRequest.execute();
 
     List<Message> messages = response.getMessages();
     if (messages == null || messages.isEmpty()) {
-      return new ArrayList<>();
+      return EmailPageResponse.builder()
+          .messages(new ArrayList<>())
+          .nextPageToken(null)
+          .build();
     }
 
     // Use CompletableFuture to fetch details concurrently
@@ -179,15 +198,23 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
                         }))
             .toList();
 
-    return futures.stream()
-        .map(java.util.concurrent.CompletableFuture::join)
-        .collect(java.util.stream.Collectors.toList());
+    List<Message> detailedMessages =
+        futures.stream().map(java.util.concurrent.CompletableFuture::join).toList();
+
+    return EmailPageResponse.builder()
+        .messages(detailedMessages)
+        .nextPageToken(response.getNextPageToken())
+        .build();
   }
+
+
 
   @Override
   public Message getEmailDetails(User user, String messageId) {
     try {
       return executeGetDetail(user, messageId);
+    } catch (GoogleJsonResponseException e) {
+      if (e.getStatusCode() == 401) {
     } catch (GoogleJsonResponseException e) {
       if (e.getStatusCode() == 401) {
         try {
@@ -198,12 +225,19 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
         }
       } else {
         throw new GmailServiceException(e);
+      } else {
+        throw new GmailServiceException(e);
       }
+    } catch (Exception e) {
+      throw new RuntimeException("Unexpected Error", e);
     } catch (Exception e) {
       throw new RuntimeException("Unexpected Error", e);
     }
   }
 
+  private Message executeGetDetail(User user, String messageId) throws IOException {
+    Gmail service = getGmailClient(user);
+    return service.users().messages().get("me", messageId).execute();
   private Message executeGetDetail(User user, String messageId) throws IOException {
     Gmail service = getGmailClient(user);
     return service.users().messages().get("me", messageId).execute();
@@ -220,6 +254,8 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
       executeMarkAsRead(user, messageId);
     } catch (GoogleJsonResponseException e) {
       if (e.getStatusCode() == 401) {
+    } catch (GoogleJsonResponseException e) {
+      if (e.getStatusCode() == 401) {
         try {
           refreshAccessToken(user);
           executeMarkAsRead(user, messageId);
@@ -228,12 +264,21 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
         }
       } else {
         throw new GmailServiceException(e);
+      } else {
+        throw new GmailServiceException(e);
       }
+    } catch (Exception e) {
+      throw new RuntimeException("Unexpected Error", e);
     } catch (Exception e) {
       throw new RuntimeException("Unexpected Error", e);
     }
   }
 
+  private void executeMarkAsRead(User user, String messageId) throws IOException {
+    Gmail service = getGmailClient(user);
+    var modifyRequest = new com.google.api.services.gmail.model.ModifyMessageRequest();
+    modifyRequest.setRemoveLabelIds(List.of("UNREAD"));
+    service.users().messages().modify("me", messageId, modifyRequest).execute();
   private void executeMarkAsRead(User user, String messageId) throws IOException {
     Gmail service = getGmailClient(user);
     var modifyRequest = new com.google.api.services.gmail.model.ModifyMessageRequest();
@@ -247,12 +292,16 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
       executeMarkAsUnread(user, messageId);
     } catch (GoogleJsonResponseException e) {
       if (e.getStatusCode() == 401) {
+    } catch (GoogleJsonResponseException e) {
+      if (e.getStatusCode() == 401) {
         try {
           refreshAccessToken(user);
           executeMarkAsUnread(user, messageId);
         } catch (IOException ioException) {
           throw new RuntimeException("Failed to refresh token", ioException);
         }
+      } else {
+        throw new GmailServiceException(e);
       } else {
         throw new GmailServiceException(e);
       }
@@ -266,12 +315,19 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
     var modifyRequest = new com.google.api.services.gmail.model.ModifyMessageRequest();
     modifyRequest.setAddLabelIds(List.of("UNREAD"));
     service.users().messages().modify("me", messageId, modifyRequest).execute();
+  private void executeMarkAsUnread(User user, String messageId) throws IOException {
+    Gmail service = getGmailClient(user);
+    var modifyRequest = new com.google.api.services.gmail.model.ModifyMessageRequest();
+    modifyRequest.setAddLabelIds(List.of("UNREAD"));
+    service.users().messages().modify("me", messageId, modifyRequest).execute();
   }
 
   @Override
   public void toggleStar(User user, String messageId, boolean starred) {
     try {
       executeToggleStar(user, messageId, starred);
+    } catch (GoogleJsonResponseException e) {
+      if (e.getStatusCode() == 401) {
     } catch (GoogleJsonResponseException e) {
       if (e.getStatusCode() == 401) {
         try {
@@ -282,12 +338,25 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
         }
       } else {
         throw new GmailServiceException(e);
+      } else {
+        throw new GmailServiceException(e);
       }
+    } catch (Exception e) {
+      throw new RuntimeException("Unexpected Error", e);
     } catch (Exception e) {
       throw new RuntimeException("Unexpected Error", e);
     }
   }
 
+  private void executeToggleStar(User user, String messageId, boolean starred) throws IOException {
+    Gmail service = getGmailClient(user);
+    var modifyRequest = new com.google.api.services.gmail.model.ModifyMessageRequest();
+    if (starred) {
+      modifyRequest.setAddLabelIds(List.of("STARRED"));
+    } else {
+      modifyRequest.setRemoveLabelIds(List.of("STARRED"));
+    }
+    service.users().messages().modify("me", messageId, modifyRequest).execute();
   private void executeToggleStar(User user, String messageId, boolean starred) throws IOException {
     Gmail service = getGmailClient(user);
     var modifyRequest = new com.google.api.services.gmail.model.ModifyMessageRequest();
@@ -305,6 +374,8 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
       executeDeleteEmail(user, messageId);
     } catch (GoogleJsonResponseException e) {
       if (e.getStatusCode() == 401) {
+    } catch (GoogleJsonResponseException e) {
+      if (e.getStatusCode() == 401) {
         try {
           refreshAccessToken(user);
           executeDeleteEmail(user, messageId);
@@ -313,12 +384,19 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
         }
       } else {
         throw new GmailServiceException(e);
+      } else {
+        throw new GmailServiceException(e);
       }
+    } catch (Exception e) {
+      throw new RuntimeException("Unexpected Error", e);
     } catch (Exception e) {
       throw new RuntimeException("Unexpected Error", e);
     }
   }
 
+  private void executeDeleteEmail(User user, String messageId) throws IOException {
+    Gmail service = getGmailClient(user);
+    service.users().messages().trash("me", messageId).execute();
   private void executeDeleteEmail(User user, String messageId) throws IOException {
     Gmail service = getGmailClient(user);
     service.users().messages().trash("me", messageId).execute();
@@ -330,6 +408,8 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
       executeUntrashEmail(user, messageId);
     } catch (GoogleJsonResponseException e) {
       if (e.getStatusCode() == 401) {
+    } catch (GoogleJsonResponseException e) {
+      if (e.getStatusCode() == 401) {
         try {
           refreshAccessToken(user);
           executeUntrashEmail(user, messageId);
@@ -338,12 +418,19 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
         }
       } else {
         throw new GmailServiceException(e);
+      } else {
+        throw new GmailServiceException(e);
       }
+    } catch (Exception e) {
+      throw new RuntimeException("Unexpected Error", e);
     } catch (Exception e) {
       throw new RuntimeException("Unexpected Error", e);
     }
   }
 
+  private void executeUntrashEmail(User user, String messageId) throws IOException {
+    Gmail service = getGmailClient(user);
+    service.users().messages().untrash("me", messageId).execute();
   private void executeUntrashEmail(User user, String messageId) throws IOException {
     Gmail service = getGmailClient(user);
     service.users().messages().untrash("me", messageId).execute();
@@ -389,5 +476,30 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
     } catch (Exception e) {
       throw new RuntimeException("Failed to batch mark emails as unread", e);
     }
+  }
+  @Override
+  public byte[] getAttachment(User user, String messageId, String attachmentId) {
+    try {
+      return executeGetAttachment(user, messageId, attachmentId);
+    } catch (GoogleJsonResponseException e) {
+      if (e.getStatusCode() == 401) {
+        try {
+          refreshAccessToken(user);
+          return executeGetAttachment(user, messageId, attachmentId);
+        } catch (IOException ioException) {
+          throw new RuntimeException("Failed to refresh token", ioException);
+        }
+      } else {
+        throw new GmailServiceException(e);
+      }
+    } catch (Exception e) {
+      throw new RuntimeException("Unexpected Error", e);
+    }
+  }
+
+  private byte[] executeGetAttachment(User user, String messageId, String attachmentId) throws IOException {
+    Gmail service = getGmailClient(user);
+    var attachmentPart = service.users().messages().attachments().get("me", messageId, attachmentId).execute();
+    return attachmentPart.decodeData();
   }
 }

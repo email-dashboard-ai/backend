@@ -6,10 +6,12 @@ import java.util.List;
 import org.example.enums.AuthProvider;
 import org.example.model.User;
 
+import org.example.dto.response.EmailPageResponse;
+
 public interface EmailProviderStrategy {
   List<Label> getLabels(User user);
 
-  List<Message> getEmails(User user, String labelId, int page, int limit);
+  EmailPageResponse getEmails(User user, String labelId, String pageToken, int limit);
 
   Message getEmailDetails(User user, String messageId);
 
@@ -28,6 +30,8 @@ public interface EmailProviderStrategy {
   void batchMarkAsRead(User user, List<String> messageIds);
 
   void batchMarkAsUnread(User user, List<String> messageIds);
+
+  byte[] getAttachment(User user, String messageId, String attachmentId);
 
   AuthProvider getSupportedProvider();
 }

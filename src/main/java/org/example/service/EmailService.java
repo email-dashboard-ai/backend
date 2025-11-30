@@ -4,10 +4,12 @@ import com.google.api.services.gmail.model.Label;
 import com.google.api.services.gmail.model.Message;
 import java.util.List;
 
+import org.example.dto.response.EmailPageResponse;
+
 public interface EmailService {
   List<Label> getLabels(String email);
 
-  List<Message> getEmails(String email, String labelId, int page, int limit);
+  EmailPageResponse getEmails(String email, String labelId, String pageToken, int limit);
 
   Message getEmailDetails(String email, String messageId);
 
@@ -26,4 +28,6 @@ public interface EmailService {
   void batchMarkAsRead(String email, List<String> messageIds);
 
   void batchMarkAsUnread(String email, List<String> messageIds);
+
+  byte[] getAttachment(String username, String messageId, String attachmentId);
 }

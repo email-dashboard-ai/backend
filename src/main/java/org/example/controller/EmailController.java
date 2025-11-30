@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.example.config.AppConfig;
 import org.example.helper.ResponseWrapper;
 import org.example.service.EmailService;
+import org.example.dto.response.EmailPageResponse;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -39,16 +40,17 @@ public class EmailController {
       summary = "List Emails",
       description =
           "Returns a paginated list of emails for a specific label. "
-              + "For Mock users, this supports pagination. For Google users, it maps 'limit' to maxResults.")
+              + "Uses pageToken for pagination.")
   @GetMapping("/list/{labelId}")
-  public ResponseWrapper<List<Message>> getEmails(
+  public ResponseWrapper<EmailPageResponse> getEmails(
       @AuthenticationPrincipal UserDetails userDetails,
       @PathVariable String labelId,
-      @RequestParam(defaultValue = "1") int page,
+      @RequestParam(required = false) String pageToken,
       @RequestParam(required = false) Integer limit) {
     int actualLimit = (limit != null) ? limit : appConfig.getGmail().getDefaultLimit();
+    actualLimit = Math.min(actualLimit, appConfig.getGmail().getMaxLimit());
     return ResponseWrapper.success(
-        emailService.getEmails(userDetails.getUsername(), labelId, page, actualLimit),
+        emailService.getEmails(userDetails.getUsername(), labelId, pageToken, actualLimit),
         "Emails fetched successfully");
   }
 
@@ -125,5 +127,17 @@ public class EmailController {
       emailService.batchMarkAsUnread(userDetails.getUsername(), ids);
     }
     return ResponseWrapper.success(null, "Emails status updated");
+  }
+
+  @Operation(summary = "Download Attachment", description = "Downloads an attachment from an email.")
+  @GetMapping("/{messageId}/attachments/{attachmentId}")
+  public org.springframework.http.ResponseEntity<byte[]> getAttachment(
+      @AuthenticationPrincipal UserDetails userDetails,
+      @PathVariable String messageId,
+      @PathVariable String attachmentId) {
+    byte[] data = emailService.getAttachment(userDetails.getUsername(), messageId, attachmentId);
+    return org.springframework.http.ResponseEntity.ok()
+        .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"attachment\"")
+        .body(data);
   }
 }
