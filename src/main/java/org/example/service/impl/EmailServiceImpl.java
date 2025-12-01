@@ -8,6 +8,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.example.enums.AuthProvider;
 import org.example.model.User;
+import org.example.dto.response.EmailPageResponse;
 import org.example.repository.UserRepository;
 import org.example.service.EmailService;
 import org.example.service.impl.strategy.EmailProviderStrategy;
@@ -40,9 +41,9 @@ public class EmailServiceImpl implements EmailService {
     return getStrategy(user).getLabels(user);
   }
 
-  public List<Message> getEmails(String email, String labelId, int page, int limit) {
+  public EmailPageResponse getEmails(String email, String labelId, String pageToken, int limit) {
     User user = userRepository.findByEmail(email).orElseThrow();
-    return getStrategy(user).getEmails(user, labelId, page, limit);
+    return getStrategy(user).getEmails(user, labelId, pageToken, limit);
   }
 
   public Message getEmailDetails(String email, String messageId) {
@@ -117,5 +118,11 @@ public class EmailServiceImpl implements EmailService {
       List<MultipartFile> attachments) {
     User user = userRepository.findByEmail(email).orElseThrow();
     getStrategy(user).replyEmail(user, messageId, to, cc, bcc, body, attachments);
+  }
+
+  @Override
+  public byte[] getAttachment(String email, String messageId, String attachmentId) {
+    User user = userRepository.findByEmail(email).orElseThrow();
+    return getStrategy(user).getAttachment(user, messageId, attachmentId);
   }
 }

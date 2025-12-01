@@ -5,10 +5,12 @@ import com.google.api.services.gmail.model.Message;
 import java.util.List;
 import org.springframework.web.multipart.MultipartFile;
 
+import org.example.dto.response.EmailPageResponse;
+
 public interface EmailService {
   List<Label> getLabels(String email);
 
-  List<Message> getEmails(String email, String labelId, int page, int limit);
+  EmailPageResponse getEmails(String email, String labelId, String pageToken, int limit);
 
   Message getEmailDetails(String email, String messageId);
 
@@ -45,4 +47,6 @@ public interface EmailService {
       List<String> bcc,
       String body,
       List<MultipartFile> attachments);
+
+  byte[] getAttachment(String username, String messageId, String attachmentId);
 }

@@ -6,6 +6,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.example.enums.AuthProvider;
 import org.example.helper.MockDataHelper;
+import org.example.dto.response.EmailPageResponse;
 import org.example.model.User;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,8 +23,20 @@ public class MockEmailStrategy implements EmailProviderStrategy {
   }
 
   @Override
-  public List<Message> getEmails(User user, String labelId, int page, int limit) {
-    return mockDataHelper.getMockMessages(labelId, page, limit);
+  public EmailPageResponse getEmails(User user, String labelId, String pageToken, int limit) {
+    int page = 1;
+    try {
+      if (pageToken != null && !pageToken.isEmpty()) {
+        page = Integer.parseInt(pageToken);
+      }
+    } catch (NumberFormatException e) {
+      // ignore
+    }
+    List<Message> messages = mockDataHelper.getMockMessages(labelId, page, limit);
+    return EmailPageResponse.builder()
+        .messages(messages)
+        .nextPageToken(String.valueOf(page + 1)) // Simple mock pagination
+        .build();
   }
 
   @Override
@@ -98,5 +111,10 @@ public class MockEmailStrategy implements EmailProviderStrategy {
       String body,
       List<MultipartFile> attachments) {
     // Mock implementation - no-op
+  }
+
+  @Override
+  public byte[] getAttachment(User user, String messageId, String attachmentId) {
+    return "This is a mock attachment content.".getBytes();
   }
 }

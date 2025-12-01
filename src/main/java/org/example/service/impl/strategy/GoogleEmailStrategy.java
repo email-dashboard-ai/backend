@@ -5,6 +5,7 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleRefreshTokenRequest;
 import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.gmail.Gmail;
@@ -30,6 +31,7 @@ import java.util.Properties;
 import lombok.RequiredArgsConstructor;
 import org.example.enums.AuthProvider;
 import org.example.exception.GmailServiceException;
+import org.example.dto.response.EmailPageResponse;
 import org.example.model.User;
 import org.example.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -120,6 +122,7 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
       }
     } catch (Exception e) {
       throw new RuntimeException("Unexpected Error", e);
+
     }
   }
 
@@ -130,14 +133,14 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
   }
 
   @Override
-  public List<Message> getEmails(User user, String labelId, int page, int limit) {
+  public EmailPageResponse getEmails(User user, String labelId, String pageToken, int limit) {
     try {
-      return executeGetEmails(user, labelId, limit);
+      return executeGetEmails(user, labelId, pageToken, limit);
     } catch (GoogleJsonResponseException e) {
       if (e.getStatusCode() == 401) {
         try {
           refreshAccessToken(user);
-          return executeGetEmails(user, labelId, limit);
+          return executeGetEmails(user, labelId, pageToken, limit);
         } catch (IOException ioException) {
           throw new RuntimeException("Failed to refresh token", ioException);
         } catch (GeneralSecurityException ex) {
@@ -151,24 +154,32 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
     }
   }
 
-  private List<Message> executeGetEmails(User user, String labelId, int limit)
+  private EmailPageResponse executeGetEmails(User user, String labelId, String pageToken, int limit)
       throws IOException, java.security.GeneralSecurityException {
     Gmail service = getGmailClient(user);
 
     // Convert user provided limit to Long
     long maxResults = (long) limit;
 
-    var response = service
+    var listRequest = service
         .users()
         .messages()
         .list("me")
         .setLabelIds(List.of(labelId))
-        .setMaxResults(maxResults)
-        .execute();
+        .setMaxResults(maxResults);
+
+    if (pageToken != null && !pageToken.isEmpty()) {
+      listRequest.setPageToken(pageToken);
+    }
+
+    var response = listRequest.execute();
 
     List<Message> messages = response.getMessages();
     if (messages == null || messages.isEmpty()) {
-      return new ArrayList<>();
+      return EmailPageResponse.builder()
+          .messages(new ArrayList<>())
+          .nextPageToken(null)
+          .build();
     }
 
     // Use CompletableFuture to fetch details concurrently
@@ -190,9 +201,12 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
                 }))
         .toList();
 
-    return futures.stream()
-        .map(java.util.concurrent.CompletableFuture::join)
-        .collect(java.util.stream.Collectors.toList());
+    List<Message> detailedMessages = futures.stream().map(java.util.concurrent.CompletableFuture::join).toList();
+
+    return EmailPageResponse.builder()
+        .messages(detailedMessages)
+        .nextPageToken(response.getNextPageToken())
+        .build();
   }
 
   @Override
@@ -397,6 +411,32 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
     } catch (Exception e) {
       throw new RuntimeException("Failed to batch mark emails as unread", e);
     }
+  }
+
+  @Override
+  public byte[] getAttachment(User user, String messageId, String attachmentId) {
+    try {
+      return executeGetAttachment(user, messageId, attachmentId);
+    } catch (GoogleJsonResponseException e) {
+      if (e.getStatusCode() == 401) {
+        try {
+          refreshAccessToken(user);
+          return executeGetAttachment(user, messageId, attachmentId);
+        } catch (IOException ioException) {
+          throw new RuntimeException("Failed to refresh token", ioException);
+        }
+      } else {
+        throw new GmailServiceException(e);
+      }
+    } catch (Exception e) {
+      throw new RuntimeException("Unexpected Error", e);
+    }
+  }
+
+  private byte[] executeGetAttachment(User user, String messageId, String attachmentId) throws IOException {
+    Gmail service = getGmailClient(user);
+    var attachmentPart = service.users().messages().attachments().get("me", messageId, attachmentId).execute();
+    return attachmentPart.decodeData();
   }
 
   @Override
