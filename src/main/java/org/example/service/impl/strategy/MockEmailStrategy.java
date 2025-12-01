@@ -8,6 +8,7 @@ import org.example.enums.AuthProvider;
 import org.example.helper.MockDataHelper;
 import org.example.model.User;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -72,6 +73,30 @@ public class MockEmailStrategy implements EmailProviderStrategy {
 
   @Override
   public void batchMarkAsUnread(User user, List<String> messageIds) {
+    // Mock implementation - no-op
+  }
+
+  @Override
+  public void sendEmail(
+      User user,
+      List<String> to,
+      List<String> cc,
+      List<String> bcc,
+      String subject,
+      String body,
+      List<MultipartFile> attachments) {
+    // Mock implementation - no-op
+  }
+
+  @Override
+  public void replyEmail(
+      User user,
+      String messageId,
+      List<String> to,
+      List<String> cc,
+      List<String> bcc,
+      String body,
+      List<MultipartFile> attachments) {
     // Mock implementation - no-op
   }
 }
