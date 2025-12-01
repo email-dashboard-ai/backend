@@ -128,17 +128,24 @@ public class EmailController {
   @PostMapping(value = "/send", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseWrapper<Void> sendEmail(
       @AuthenticationPrincipal UserDetails userDetails,
-      @RequestPart("data") SendEmailRequest request,
+      @RequestPart("data") String dataJson,
       @RequestPart(value = "attachments", required = false) List<MultipartFile> attachments) {
-    emailService.sendEmail(
-        userDetails.getUsername(),
-        request.getTo(),
-        request.getCc(),
-        request.getBcc(),
-        request.getSubject(),
-        request.getBody(),
-        attachments);
-    return ResponseWrapper.success("Email sent successfully");
+    try {
+      com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+      SendEmailRequest request = objectMapper.readValue(dataJson, SendEmailRequest.class);
+
+      emailService.sendEmail(
+          userDetails.getUsername(),
+          request.getTo(),
+          request.getCc(),
+          request.getBcc(),
+          request.getSubject(),
+          request.getBody(),
+          attachments);
+      return ResponseWrapper.success("Email sent successfully");
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to parse email request: " + e.getMessage(), e);
+    }
   }
 
   @Operation(summary = "Reply Email", description = "Replies to an email with optional attachments.")
@@ -146,17 +153,24 @@ public class EmailController {
   public ResponseWrapper<Void> replyEmail(
       @AuthenticationPrincipal UserDetails userDetails,
       @PathVariable String id,
-      @RequestPart("data") ReplyEmailRequest request,
+      @RequestPart("data") String dataJson,
       @RequestPart(value = "attachments", required = false) List<MultipartFile> attachments) {
-    emailService.replyEmail(
-        userDetails.getUsername(),
-        id,
-        request.getTo(),
-        request.getCc(),
-        request.getBcc(),
-        request.getBody(),
-        attachments);
-    return ResponseWrapper.success("Reply sent successfully");
+    try {
+      com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+      ReplyEmailRequest request = objectMapper.readValue(dataJson, ReplyEmailRequest.class);
+
+      emailService.replyEmail(
+          userDetails.getUsername(),
+          id,
+          request.getTo(),
+          request.getCc(),
+          request.getBcc(),
+          request.getBody(),
+          attachments);
+      return ResponseWrapper.success("Reply sent successfully");
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to parse reply request: " + e.getMessage(), e);
+    }
   }
 
   @Operation(summary = "Download Attachment", description = "Downloads an attachment from an email.")
