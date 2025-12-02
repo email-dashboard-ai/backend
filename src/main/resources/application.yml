@@ -6,8 +6,6 @@ server:
       charset: UTF-8
       force: true
 
-
-
 # Database Configuration
 # Uses "db" as default host (Docker service name), "localhost" as fallback
 spring:
@@ -21,6 +19,10 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+  servlet:
+    multipart:
+      max-file-size: 25MB # Maximum size for a single file
+      max-request-size: 50MB # Maximum size for the entire request (all files combined)
 
 # JWT Configuration
 jwt:

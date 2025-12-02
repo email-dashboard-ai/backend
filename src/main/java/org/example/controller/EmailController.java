@@ -8,39 +8,36 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.example.config.AppConfig;
+import org.example.dto.request.ReplyEmailRequest;
+import org.example.dto.request.SendEmailRequest;
 import org.example.helper.ResponseWrapper;
 import org.example.service.EmailService;
 import org.example.dto.response.EmailPageResponse;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.MediaType;
 
 @RestController
 @RequestMapping("/api/gmail")
 @RequiredArgsConstructor
-@Tag(
-    name = "Gmail Operations",
-    description = "Endpoints for fetching labels and emails (Mock or Real)")
+@Tag(name = "Gmail Operations", description = "Endpoints for fetching labels and emails (Mock or Real)")
 @SecurityRequirement(name = "bearerAuth") // This applies security to all endpoints in this class
 public class EmailController {
 
   private final EmailService emailService;
   private final AppConfig appConfig;
 
-  @Operation(
-      summary = "Get Mailboxes",
-      description = "Returns a list of labels (folders) like INBOX, SENT, etc.")
+  @Operation(summary = "Get Mailboxes", description = "Returns a list of labels (folders) like INBOX, SENT, etc.")
   @GetMapping("/labels")
   public ResponseWrapper<List<Label>> getLabels(@AuthenticationPrincipal UserDetails userDetails) {
     return ResponseWrapper.success(
         emailService.getLabels(userDetails.getUsername()), "Labels fetched successfully");
   }
 
-  @Operation(
-      summary = "List Emails",
-      description =
-          "Returns a paginated list of emails for a specific label. "
-              + "Uses pageToken for pagination.")
+  @Operation(summary = "List Emails", description = "Returns a paginated list of emails for a specific label. "
+      + "Uses pageToken for pagination.")
   @GetMapping("/list/{labelId}")
   public ResponseWrapper<EmailPageResponse> getEmails(
       @AuthenticationPrincipal UserDetails userDetails,
@@ -54,9 +51,7 @@ public class EmailController {
         "Emails fetched successfully");
   }
 
-  @Operation(
-      summary = "Get Email Detail",
-      description = "Returns the full content of a specific email by ID.")
+  @Operation(summary = "Get Email Detail", description = "Returns the full content of a specific email by ID.")
   @GetMapping("/{id}")
   public ResponseWrapper<Message> getEmailDetail(
       @AuthenticationPrincipal UserDetails userDetails, @PathVariable String id) {
@@ -127,6 +122,55 @@ public class EmailController {
       emailService.batchMarkAsUnread(userDetails.getUsername(), ids);
     }
     return ResponseWrapper.success(null, "Emails status updated");
+  }
+
+  @Operation(summary = "Send Email", description = "Sends an email with optional attachments.")
+  @PostMapping(value = "/send", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  public ResponseWrapper<Void> sendEmail(
+      @AuthenticationPrincipal UserDetails userDetails,
+      @RequestPart("data") String dataJson,
+      @RequestPart(value = "attachments", required = false) List<MultipartFile> attachments) {
+    try {
+      com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+      SendEmailRequest request = objectMapper.readValue(dataJson, SendEmailRequest.class);
+
+      emailService.sendEmail(
+          userDetails.getUsername(),
+          request.getTo(),
+          request.getCc(),
+          request.getBcc(),
+          request.getSubject(),
+          request.getBody(),
+          attachments);
+      return ResponseWrapper.success("Email sent successfully");
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to parse email request: " + e.getMessage(), e);
+    }
+  }
+
+  @Operation(summary = "Reply Email", description = "Replies to an email with optional attachments.")
+  @PostMapping(value = "/{id}/reply", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+  public ResponseWrapper<Void> replyEmail(
+      @AuthenticationPrincipal UserDetails userDetails,
+      @PathVariable String id,
+      @RequestPart("data") String dataJson,
+      @RequestPart(value = "attachments", required = false) List<MultipartFile> attachments) {
+    try {
+      com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+      ReplyEmailRequest request = objectMapper.readValue(dataJson, ReplyEmailRequest.class);
+
+      emailService.replyEmail(
+          userDetails.getUsername(),
+          id,
+          request.getTo(),
+          request.getCc(),
+          request.getBcc(),
+          request.getBody(),
+          attachments);
+      return ResponseWrapper.success("Reply sent successfully");
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to parse reply request: " + e.getMessage(), e);
+    }
   }
 
   @Operation(summary = "Download Attachment", description = "Downloads an attachment from an email.")

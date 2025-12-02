@@ -9,6 +9,7 @@ import org.example.helper.MockDataHelper;
 import org.example.dto.response.EmailPageResponse;
 import org.example.model.User;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -25,11 +26,11 @@ public class MockEmailStrategy implements EmailProviderStrategy {
   public EmailPageResponse getEmails(User user, String labelId, String pageToken, int limit) {
     int page = 1;
     try {
-        if (pageToken != null && !pageToken.isEmpty()) {
-            page = Integer.parseInt(pageToken);
-        }
+      if (pageToken != null && !pageToken.isEmpty()) {
+        page = Integer.parseInt(pageToken);
+      }
     } catch (NumberFormatException e) {
-        // ignore
+      // ignore
     }
     List<Message> messages = mockDataHelper.getMockMessages(labelId, page, limit);
     return EmailPageResponse.builder()
@@ -85,6 +86,30 @@ public class MockEmailStrategy implements EmailProviderStrategy {
 
   @Override
   public void batchMarkAsUnread(User user, List<String> messageIds) {
+    // Mock implementation - no-op
+  }
+
+  @Override
+  public void sendEmail(
+      User user,
+      List<String> to,
+      List<String> cc,
+      List<String> bcc,
+      String subject,
+      String body,
+      List<MultipartFile> attachments) {
+    // Mock implementation - no-op
+  }
+
+  @Override
+  public void replyEmail(
+      User user,
+      String messageId,
+      List<String> to,
+      List<String> cc,
+      List<String> bcc,
+      String body,
+      List<MultipartFile> attachments) {
     // Mock implementation - no-op
   }
 

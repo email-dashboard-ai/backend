@@ -13,21 +13,23 @@ import org.example.repository.UserRepository;
 import org.example.service.EmailService;
 import org.example.service.impl.strategy.EmailProviderStrategy;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class EmailServiceImpl implements EmailService {
   private final UserRepository userRepository;
   private final Map<AuthProvider, EmailProviderStrategy> strategies;
 
-  // Constructor Injection automatically finds all implementations of EmailProviderStrategy
+  // Constructor Injection automatically finds all implementations of
+  // EmailProviderStrategy
   public EmailServiceImpl(UserRepository userRepository, List<EmailProviderStrategy> strategyList) {
     this.userRepository = userRepository;
-    // Convert list of strategies to a Map for O(1) lookup: { LOCAL -> MockStrategy, GOOGLE ->
+    // Convert list of strategies to a Map for O(1) lookup: { LOCAL -> MockStrategy,
+    // GOOGLE ->
     // GoogleStrategy }
-    this.strategies =
-        strategyList.stream()
-            .collect(
-                Collectors.toMap(EmailProviderStrategy::getSupportedProvider, Function.identity()));
+    this.strategies = strategyList.stream()
+        .collect(
+            Collectors.toMap(EmailProviderStrategy::getSupportedProvider, Function.identity()));
   }
 
   private EmailProviderStrategy getStrategy(User user) {
@@ -90,6 +92,32 @@ public class EmailServiceImpl implements EmailService {
   public void batchMarkAsUnread(String email, List<String> messageIds) {
     User user = userRepository.findByEmail(email).orElseThrow();
     getStrategy(user).batchMarkAsUnread(user, messageIds);
+  }
+
+  @Override
+  public void sendEmail(
+      String email,
+      List<String> to,
+      List<String> cc,
+      List<String> bcc,
+      String subject,
+      String body,
+      List<MultipartFile> attachments) {
+    User user = userRepository.findByEmail(email).orElseThrow();
+    getStrategy(user).sendEmail(user, to, cc, bcc, subject, body, attachments);
+  }
+
+  @Override
+  public void replyEmail(
+      String email,
+      String messageId,
+      List<String> to,
+      List<String> cc,
+      List<String> bcc,
+      String body,
+      List<MultipartFile> attachments) {
+    User user = userRepository.findByEmail(email).orElseThrow();
+    getStrategy(user).replyEmail(user, messageId, to, cc, bcc, body, attachments);
   }
 
   @Override

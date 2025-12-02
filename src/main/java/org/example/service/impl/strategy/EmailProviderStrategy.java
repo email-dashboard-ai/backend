@@ -5,6 +5,7 @@ import com.google.api.services.gmail.model.Message;
 import java.util.List;
 import org.example.enums.AuthProvider;
 import org.example.model.User;
+import org.springframework.web.multipart.MultipartFile;
 
 import org.example.dto.response.EmailPageResponse;
 
@@ -32,6 +33,24 @@ public interface EmailProviderStrategy {
   void batchMarkAsUnread(User user, List<String> messageIds);
 
   byte[] getAttachment(User user, String messageId, String attachmentId);
+
+  void sendEmail(
+      User user,
+      List<String> to,
+      List<String> cc,
+      List<String> bcc,
+      String subject,
+      String body,
+      List<MultipartFile> attachments);
+
+  void replyEmail(
+      User user,
+      String messageId,
+      List<String> to,
+      List<String> cc,
+      List<String> bcc,
+      String body,
+      List<MultipartFile> attachments);
 
   AuthProvider getSupportedProvider();
 }

@@ -11,10 +11,23 @@ import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.Label;
 import com.google.api.services.gmail.model.Message;
+import jakarta.activation.DataHandler;
+import jakarta.activation.DataSource;
+import jakarta.mail.MessagingException;
+import jakarta.mail.Session;
+import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.internet.MimeBodyPart;
+import jakarta.mail.internet.MimeMessage;
+import jakarta.mail.internet.MimeMessage.RecipientType;
+import jakarta.mail.internet.MimeMultipart;
+import jakarta.mail.util.ByteArrayDataSource;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
+import java.util.Properties;
 import lombok.RequiredArgsConstructor;
 import org.example.enums.AuthProvider;
 import org.example.exception.GmailServiceException;
@@ -23,6 +36,7 @@ import org.example.model.User;
 import org.example.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -40,26 +54,27 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
   private String applicationName;
 
   /**
-   * Gets a valid Gmail client. If the access token is invalid/expired, it uses the Refresh Token to
+   * Gets a valid Gmail client. If the access token is invalid/expired, it uses
+   * the Refresh Token to
    * get a new one and updates the Database.
    */
   private Gmail getGmailClient(User user) {
     try {
-      GoogleCredential credential =
-          new GoogleCredential().setAccessToken(user.getGoogleAccessToken());
+      GoogleCredential credential = new GoogleCredential().setAccessToken(user.getGoogleAccessToken());
 
       // 1. Build the Gmail service with current token
-      Gmail service =
-          new Gmail.Builder(
-                  GoogleNetHttpTransport.newTrustedTransport(),
-                  GsonFactory.getDefaultInstance(),
-                  credential)
-              .setApplicationName(applicationName)
-              .build();
+      Gmail service = new Gmail.Builder(
+          GoogleNetHttpTransport.newTrustedTransport(),
+          GsonFactory.getDefaultInstance(),
+          credential)
+          .setApplicationName(applicationName)
+          .build();
 
-      // 2. Proactive Check: Try a lightweight call (e.g., get Profile) to check validity
+      // 2. Proactive Check: Try a lightweight call (e.g., get Profile) to check
+      // validity
       // Or, simply catch the 401 error in the actual method.
-      // Here, we will assume the token is valid, but if we catch an exception below, we refresh.
+      // Here, we will assume the token is valid, but if we catch an exception below,
+      // we refresh.
       return service;
 
     } catch (Exception e) {
@@ -73,14 +88,13 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
       throw new RuntimeException("No Google Refresh Token available for user " + user.getEmail());
     }
 
-    GoogleTokenResponse response =
-        new GoogleRefreshTokenRequest(
-                new NetHttpTransport(),
-                new GsonFactory(),
-                user.getGoogleRefreshToken(),
-                googleClientId,
-                googleClientSecret)
-            .execute();
+    GoogleTokenResponse response = new GoogleRefreshTokenRequest(
+        new NetHttpTransport(),
+        new GsonFactory(),
+        user.getGoogleRefreshToken(),
+        googleClientId,
+        googleClientSecret)
+        .execute();
 
     String newAccessToken = response.getAccessToken();
 
@@ -134,7 +148,7 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
         }
       } else {
         throw new GmailServiceException(e);
-      } 
+      }
     } catch (Exception e) {
       throw new RuntimeException("Unexpected Error", e);
     }
@@ -148,11 +162,11 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
     long maxResults = (long) limit;
 
     var listRequest = service
-            .users()
-            .messages()
-            .list("me")
-            .setLabelIds(List.of(labelId))
-            .setMaxResults(maxResults);
+        .users()
+        .messages()
+        .list("me")
+        .setLabelIds(List.of(labelId))
+        .setMaxResults(maxResults);
 
     if (pageToken != null && !pageToken.isEmpty()) {
       listRequest.setPageToken(pageToken);
@@ -169,36 +183,31 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
     }
 
     // Use CompletableFuture to fetch details concurrently
-    List<java.util.concurrent.CompletableFuture<Message>> futures =
-        messages.stream()
-            .map(
-                msg ->
-                    java.util.concurrent.CompletableFuture.supplyAsync(
-                        () -> {
-                          try {
-                            return service
-                                .users()
-                                .messages()
-                                .get("me", msg.getId())
-                                .setFormat("metadata")
-                                .setMetadataHeaders(List.of("Subject", "From", "To", "Date"))
-                                .execute();
-                          } catch (IOException e) {
-                            throw new RuntimeException(e);
-                          }
-                        }))
-            .toList();
+    List<java.util.concurrent.CompletableFuture<Message>> futures = messages.stream()
+        .map(
+            msg -> java.util.concurrent.CompletableFuture.supplyAsync(
+                () -> {
+                  try {
+                    return service
+                        .users()
+                        .messages()
+                        .get("me", msg.getId())
+                        .setFormat("metadata")
+                        .setMetadataHeaders(List.of("Subject", "From", "To", "Date"))
+                        .execute();
+                  } catch (IOException e) {
+                    throw new RuntimeException(e);
+                  }
+                }))
+        .toList();
 
-    List<Message> detailedMessages =
-        futures.stream().map(java.util.concurrent.CompletableFuture::join).toList();
+    List<Message> detailedMessages = futures.stream().map(java.util.concurrent.CompletableFuture::join).toList();
 
     return EmailPageResponse.builder()
         .messages(detailedMessages)
         .nextPageToken(response.getNextPageToken())
         .build();
   }
-
-
 
   @Override
   public Message getEmailDetails(User user, String messageId) {
@@ -335,8 +344,6 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
     }
   }
 
-
-
   private void executeDeleteEmail(User user, String messageId) throws IOException {
     Gmail service = getGmailClient(user);
     service.users().messages().trash("me", messageId).execute();
@@ -371,10 +378,9 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
   public void batchDeleteEmails(User user, List<String> messageIds) {
     try {
       Gmail service = getGmailClient(user);
-      com.google.api.services.gmail.model.BatchModifyMessagesRequest batchRequest =
-          new com.google.api.services.gmail.model.BatchModifyMessagesRequest()
-              .setIds(messageIds)
-              .setAddLabelIds(java.util.Collections.singletonList("TRASH"));
+      com.google.api.services.gmail.model.BatchModifyMessagesRequest batchRequest = new com.google.api.services.gmail.model.BatchModifyMessagesRequest()
+          .setIds(messageIds)
+          .setAddLabelIds(java.util.Collections.singletonList("TRASH"));
       service.users().messages().batchModify("me", batchRequest).execute();
     } catch (Exception e) {
       throw new RuntimeException("Failed to batch delete emails", e);
@@ -385,10 +391,9 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
   public void batchMarkAsRead(User user, List<String> messageIds) {
     try {
       Gmail service = getGmailClient(user);
-      com.google.api.services.gmail.model.BatchModifyMessagesRequest batchRequest =
-          new com.google.api.services.gmail.model.BatchModifyMessagesRequest()
-              .setIds(messageIds)
-              .setRemoveLabelIds(java.util.Collections.singletonList("UNREAD"));
+      com.google.api.services.gmail.model.BatchModifyMessagesRequest batchRequest = new com.google.api.services.gmail.model.BatchModifyMessagesRequest()
+          .setIds(messageIds)
+          .setRemoveLabelIds(java.util.Collections.singletonList("UNREAD"));
       service.users().messages().batchModify("me", batchRequest).execute();
     } catch (Exception e) {
       throw new RuntimeException("Failed to batch mark emails as read", e);
@@ -399,15 +404,15 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
   public void batchMarkAsUnread(User user, List<String> messageIds) {
     try {
       Gmail service = getGmailClient(user);
-      com.google.api.services.gmail.model.BatchModifyMessagesRequest batchRequest =
-          new com.google.api.services.gmail.model.BatchModifyMessagesRequest()
-              .setIds(messageIds)
-              .setAddLabelIds(java.util.Collections.singletonList("UNREAD"));
+      com.google.api.services.gmail.model.BatchModifyMessagesRequest batchRequest = new com.google.api.services.gmail.model.BatchModifyMessagesRequest()
+          .setIds(messageIds)
+          .setAddLabelIds(java.util.Collections.singletonList("UNREAD"));
       service.users().messages().batchModify("me", batchRequest).execute();
     } catch (Exception e) {
       throw new RuntimeException("Failed to batch mark emails as unread", e);
     }
   }
+
   @Override
   public byte[] getAttachment(User user, String messageId, String attachmentId) {
     try {
@@ -432,5 +437,210 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
     Gmail service = getGmailClient(user);
     var attachmentPart = service.users().messages().attachments().get("me", messageId, attachmentId).execute();
     return attachmentPart.decodeData();
+  }
+
+  @Override
+  public void sendEmail(
+      User user,
+      List<String> to,
+      List<String> cc,
+      List<String> bcc,
+      String subject,
+      String body,
+      List<MultipartFile> attachments) {
+    try {
+      executeSendEmail(user, to, cc, bcc, subject, body, attachments);
+    } catch (GoogleJsonResponseException e) {
+      if (e.getStatusCode() == 401) {
+        try {
+          refreshAccessToken(user);
+          executeSendEmail(user, to, cc, bcc, subject, body, attachments);
+        } catch (IOException | MessagingException ioException) {
+          throw new RuntimeException("Failed to refresh token or send email", ioException);
+        }
+      } else {
+        throw new GmailServiceException(e);
+      }
+    } catch (Exception e) {
+      throw new RuntimeException("Unexpected Error", e);
+    }
+  }
+
+  private void executeSendEmail(
+      User user,
+      List<String> to,
+      List<String> cc,
+      List<String> bcc,
+      String subject,
+      String body,
+      List<MultipartFile> attachments)
+      throws IOException, MessagingException {
+    Gmail service = getGmailClient(user);
+    MimeMessage email = createMimeMessage(to, cc, bcc, subject, body, attachments);
+    sendMessage(service, email);
+  }
+
+  @Override
+  public void replyEmail(
+      User user,
+      String messageId,
+      List<String> to,
+      List<String> cc,
+      List<String> bcc,
+      String body,
+      List<MultipartFile> attachments) {
+    try {
+      executeReplyEmail(user, messageId, to, cc, bcc, body, attachments);
+    } catch (GoogleJsonResponseException e) {
+      if (e.getStatusCode() == 401) {
+        try {
+          refreshAccessToken(user);
+          executeReplyEmail(user, messageId, to, cc, bcc, body, attachments);
+        } catch (IOException | MessagingException ioException) {
+          throw new RuntimeException("Failed to refresh token or reply email", ioException);
+        }
+      } else {
+        throw new GmailServiceException(e);
+      }
+    } catch (Exception e) {
+      throw new RuntimeException("Unexpected Error", e);
+    }
+  }
+
+  private void executeReplyEmail(
+      User user,
+      String messageId,
+      List<String> to,
+      List<String> cc,
+      List<String> bcc,
+      String body,
+      List<MultipartFile> attachments)
+      throws IOException, MessagingException {
+    Gmail service = getGmailClient(user);
+
+    // 1. Get the original message to find headers
+    Message originalMessage = service
+        .users()
+        .messages()
+        .get("me", messageId)
+        .setFormat("metadata")
+        .setMetadataHeaders(List.of("Subject", "Message-ID", "References", "From", "Reply-To"))
+        .execute();
+
+    String subject = "";
+    String originalMessageId = "";
+    String references = "";
+    String fallbackTo = "";
+
+    for (var header : originalMessage.getPayload().getHeaders()) {
+      if (header.getName().equalsIgnoreCase("Reply-To")) {
+        fallbackTo = header.getValue();
+      } else if (header.getName().equalsIgnoreCase("From") && fallbackTo.isEmpty()) {
+        fallbackTo = header.getValue();
+      }
+      if (header.getName().equalsIgnoreCase("Subject")) {
+        subject = header.getValue();
+      } else if (header.getName().equalsIgnoreCase("Message-ID")) {
+        originalMessageId = header.getValue();
+      } else if (header.getName().equalsIgnoreCase("References")) {
+        references = header.getValue();
+      }
+    }
+
+    if (!subject.toLowerCase().startsWith("re:")) {
+      subject = "Re: " + subject;
+    }
+
+    if (references.isEmpty()) {
+      references = originalMessageId;
+    } else {
+      references += " " + originalMessageId;
+    }
+
+    // Use provided 'to' list, or fallback to the original sender
+    List<String> finalTo = (to != null && !to.isEmpty()) ? to : List.of(fallbackTo);
+
+    MimeMessage email = createMimeMessage(finalTo, cc, bcc, subject, body, attachments);
+
+    // Add headers for threading
+    email.setHeader("In-Reply-To", originalMessageId);
+    email.setHeader("References", references);
+
+    sendMessage(service, email, originalMessage.getThreadId());
+  }
+
+  private MimeMessage createMimeMessage(
+      List<String> to,
+      List<String> cc,
+      List<String> bcc,
+      String subject,
+      String body,
+      List<MultipartFile> attachments)
+      throws MessagingException, IOException {
+    Properties props = new Properties();
+    Session session = Session.getDefaultInstance(props, null);
+    MimeMessage email = new MimeMessage(session);
+    email.setFrom(new InternetAddress("me"));
+
+    if (to != null) {
+      for (String toEmail : to) {
+        email.addRecipient(RecipientType.TO, new InternetAddress(toEmail));
+      }
+    }
+
+    if (cc != null) {
+      for (String ccEmail : cc) {
+        email.addRecipient(RecipientType.CC, new InternetAddress(ccEmail));
+      }
+    }
+
+    if (bcc != null) {
+      for (String bccEmail : bcc) {
+        email.addRecipient(RecipientType.BCC, new InternetAddress(bccEmail));
+      }
+    }
+
+    email.setSubject(subject);
+
+    MimeMultipart multipart = new MimeMultipart();
+
+    // Add HTML Body
+    MimeBodyPart bodyPart = new MimeBodyPart();
+    bodyPart.setContent(body, "text/html; charset=utf-8");
+    multipart.addBodyPart(bodyPart);
+
+    // Add Attachments
+    if (attachments != null && !attachments.isEmpty()) {
+      for (MultipartFile file : attachments) {
+        MimeBodyPart attachmentPart = new MimeBodyPart();
+        DataSource source = new ByteArrayDataSource(file.getBytes(), file.getContentType());
+        attachmentPart.setDataHandler(new DataHandler(source));
+        attachmentPart.setFileName(file.getOriginalFilename());
+        multipart.addBodyPart(attachmentPart);
+      }
+    }
+
+    email.setContent(multipart);
+    return email;
+  }
+
+  private void sendMessage(Gmail service, MimeMessage email) throws MessagingException, IOException {
+    sendMessage(service, email, null);
+  }
+
+  private void sendMessage(Gmail service, MimeMessage email, String threadId)
+      throws MessagingException, IOException {
+    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    email.writeTo(buffer);
+    byte[] bytes = buffer.toByteArray();
+    String encodedEmail = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+
+    Message message = new Message();
+    message.setRaw(encodedEmail);
+    if (threadId != null) {
+      message.setThreadId(threadId);
+    }
+
+    service.users().messages().send("me", message).execute();
   }
 }
