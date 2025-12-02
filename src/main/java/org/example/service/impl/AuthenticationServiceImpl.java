@@ -106,6 +106,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     String email = tokenResponse.parseIdToken().getPayload().getEmail();
     String name = (String) tokenResponse.parseIdToken().getPayload().get("name");
+    String picture = (String) tokenResponse.parseIdToken().getPayload().get("picture");
 
     // 2. Find existing user OR Create new Google user
     User user =
@@ -116,6 +117,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                   User newUser = new User();
                   newUser.setEmail(email);
                   newUser.setName(name);
+                  newUser.setAvatar(picture);
                   newUser.setProvider(AuthProvider.GOOGLE);
                   return newUser;
                 });
@@ -124,6 +126,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     user.setGoogleAccessToken(tokenResponse.getAccessToken());
     if (tokenResponse.getRefreshToken() != null) {
       user.setGoogleRefreshToken(tokenResponse.getRefreshToken());
+    }
+    if (picture != null) {
+      user.setAvatar(picture);
     }
     repository.save(user);
 
