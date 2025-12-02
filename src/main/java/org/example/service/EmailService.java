@@ -49,4 +49,6 @@ public interface EmailService {
       List<MultipartFile> attachments);
 
   byte[] getAttachment(String username, String messageId, String attachmentId);
+
+  List<Message> getThreadMessages(String username, String threadId);
 }

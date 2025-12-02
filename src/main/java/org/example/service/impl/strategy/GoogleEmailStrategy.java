@@ -643,4 +643,31 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
 
     service.users().messages().send("me", message).execute();
   }
+
+  @Override
+  public List<Message> getThreadMessages(User user, String threadId) {
+    try {
+      return executeGetThreadMessages(user, threadId);
+    } catch (GoogleJsonResponseException e) {
+      if (e.getStatusCode() == 401) {
+        try {
+          refreshAccessToken(user);
+          return executeGetThreadMessages(user, threadId);
+        } catch (IOException ioException) {
+          throw new RuntimeException("Failed to refresh token", ioException);
+        }
+      } else {
+        throw new GmailServiceException(e);
+      }
+    } catch (Exception e) {
+      throw new RuntimeException("Unexpected Error", e);
+    }
+  }
+
+  private List<Message> executeGetThreadMessages(User user, String threadId) throws IOException {
+    Gmail service = getGmailClient(user);
+    // Fetch the thread with 'full' format to get all messages
+    var thread = service.users().threads().get("me", threadId).setFormat("full").execute();
+    return thread.getMessages();
+  }
 }

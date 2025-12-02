@@ -60,6 +60,15 @@ public class EmailController {
         "Email details fetched successfully");
   }
 
+  @Operation(summary = "Get Thread Messages", description = "Returns all messages in a thread.")
+  @GetMapping("/thread/{threadId}")
+  public ResponseWrapper<List<Message>> getThreadMessages(
+      @AuthenticationPrincipal UserDetails userDetails, @PathVariable String threadId) {
+    return ResponseWrapper.success(
+        emailService.getThreadMessages(userDetails.getUsername(), threadId),
+        "Thread messages fetched successfully");
+  }
+
   @Operation(summary = "Mark Email as Read", description = "Marks an email as read.")
   @PostMapping("/{id}/read")
   public ResponseWrapper<Void> markAsRead(

@@ -125,4 +125,10 @@ public class EmailServiceImpl implements EmailService {
     User user = userRepository.findByEmail(email).orElseThrow();
     return getStrategy(user).getAttachment(user, messageId, attachmentId);
   }
+
+  @Override
+  public List<Message> getThreadMessages(String email, String threadId) {
+    User user = userRepository.findByEmail(email).orElseThrow();
+    return getStrategy(user).getThreadMessages(user, threadId);
+  }
 }

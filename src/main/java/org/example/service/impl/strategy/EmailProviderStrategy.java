@@ -34,6 +34,8 @@ public interface EmailProviderStrategy {
 
   byte[] getAttachment(User user, String messageId, String attachmentId);
 
+  List<Message> getThreadMessages(User user, String threadId);
+
   void sendEmail(
       User user,
       List<String> to,

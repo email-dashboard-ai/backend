@@ -115,6 +115,12 @@ public class MockEmailStrategy implements EmailProviderStrategy {
 
   @Override
   public byte[] getAttachment(User user, String messageId, String attachmentId) {
-    return "This is a mock attachment content.".getBytes();
+    return new byte[0];
+  }
+
+  @Override
+  public List<Message> getThreadMessages(User user, String threadId) {
+    // Mock implementation: return a list containing a single mock message
+    return List.of(getEmailDetails(user, threadId)); // Assuming threadId matches messageId for mock
   }
 }
