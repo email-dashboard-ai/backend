@@ -28,7 +28,14 @@ public class SecurityConfig {
   private String allowedOrigins;
 
   private static final String[] WHITE_LIST_URL = {
-    "/api/auth/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html"
+    "/api/auth/**",
+    "/v3/api-docs/**",
+    "/swagger-ui/**",
+    "/swagger-ui.html",
+    "/swagger-resources/**",
+    "/configuration/ui",
+    "/configuration/security",
+    "/webjars/**"
   };
 
   @Bean
@@ -38,9 +45,9 @@ public class SecurityConfig {
         .authorizeHttpRequests(
             auth ->
                 auth.requestMatchers(WHITE_LIST_URL)
-                    .permitAll() // Allow Swagger & Auth
+                    .permitAll()
                     .anyRequest()
-                    .authenticated() // Protect everything else (like /api/gmail/**)
+                    .authenticated()
             )
         .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authenticationProvider(authenticationProvider)
