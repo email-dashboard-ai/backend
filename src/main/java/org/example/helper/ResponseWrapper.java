@@ -1,4 +1,4 @@
-package org.example.dto.response;
+package org.example.helper;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -25,15 +25,19 @@ public class ResponseWrapper<T> {
         .build();
   }
 
+  public static <T> ResponseWrapper<T> success(String message) {
+    return ResponseWrapper.<T>builder()
+        .success(true)
+        .errorCode(ErrorCode.SUCCESS.getCode())
+        .message(message)
+        .build();
+  }
+
   public static <T> ResponseWrapper<T> error(ErrorCode errorCode, String message) {
     return ResponseWrapper.<T>builder()
         .success(false)
         .errorCode(errorCode.getCode())
         .message(message != null ? message : errorCode.getMessage())
         .build();
-  }
-
-  public static <T> ResponseWrapper<T> error(ErrorCode errorCode) {
-    return error(errorCode, null);
   }
 }

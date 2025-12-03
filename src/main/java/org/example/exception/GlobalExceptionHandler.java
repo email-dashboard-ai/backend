@@ -1,6 +1,6 @@
 package org.example.exception;
 
-import org.example.dto.response.ResponseWrapper;
+import org.example.helper.ResponseWrapper;
 import org.example.enums.ErrorCode;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -9,6 +9,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.example.exception.GmailServiceException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -47,7 +48,17 @@ public class GlobalExceptionHandler {
         "Invalid JSON payload: " + ex.getMessage());
   }
 
-  // 5. Catch-all for other runtime errors (500 Internal Server Error)
+  // 5. Handle Google API Errors
+  @ExceptionHandler(GmailServiceException.class)
+  public ResponseEntity<ResponseWrapper<Void>> handleGoogleException(GmailServiceException ex) {
+    var googleEx = ex.getGoogleException();
+    return buildResponse(
+        HttpStatus.valueOf(googleEx.getStatusCode()),
+        ErrorCode.ERR_GMAIL_SERVICE,
+        googleEx.getDetails() != null ? googleEx.getDetails().getMessage() : googleEx.getMessage());
+  }
+
+  // 6. Catch-all for other runtime errors (500 Internal Server Error)
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ResponseWrapper<Void>> handleGenericException(Exception ex) {
     ex.printStackTrace(); // Print log for debugging

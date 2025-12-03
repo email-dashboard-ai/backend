@@ -27,6 +27,8 @@ public class User implements UserDetails {
 
   private AuthProvider provider;
 
+  private String avatar;
+
   @Column(length = 2048) // Tokens can be long
   private String googleAccessToken;
 

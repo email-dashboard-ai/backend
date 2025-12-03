@@ -12,7 +12,8 @@ public class AppConfig {
 
   @Data
   public static class GmailConfig {
-    private int defaultLimit = 50;
+    private int defaultLimit = 20;
+    private int maxLimit = 50;
   }
 
   private GoogleConfig google = new GoogleConfig();
