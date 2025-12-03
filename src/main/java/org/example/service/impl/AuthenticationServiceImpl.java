@@ -30,8 +30,11 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import lombok.extern.slf4j.Slf4j;
+
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthenticationServiceImpl implements AuthenticationService {
   private final UserRepository repository;
   private final PasswordEncoder passwordEncoder;
@@ -49,7 +52,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
   @Override
   public AuthResponse register(RegisterRequest request) {
-    // 1. PREVENT DUPLICATES: Check DB before saving
+    log.info("Registering new user: {}", request.getEmail());
     if (repository.findByEmail(request.getEmail()).isPresent()) {
       throw new UserAlreadyExistsException("Email already in use: " + request.getEmail());
     }
@@ -72,7 +75,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
   @Override
   public AuthResponse authenticate(AuthRequest request) {
-    // This throws BadCredentialsException if auth fails, which GlobalHandler catches
+    log.info("Authenticating user: {}", request.getEmail());
     authenticationManager.authenticate(
         new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
 
@@ -92,7 +95,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
   @Override
   public AuthResponse authenticateGoogle(GoogleAuthRequest request) throws IOException {
-    // 1. Exchange Auth Code for Tokens with Google
+    log.info("Authenticating with Google");
     GoogleTokenResponse tokenResponse =
         new GoogleAuthorizationCodeTokenRequest(
                 new NetHttpTransport(),
@@ -108,7 +111,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     String name = (String) tokenResponse.parseIdToken().getPayload().get("name");
     String picture = (String) tokenResponse.parseIdToken().getPayload().get("picture");
 
-    // 2. Find existing user OR Create new Google user
+
+
     User user =
         repository
             .findByEmail(email)
@@ -122,7 +126,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                   return newUser;
                 });
 
-    // 3. Update Google Tokens (Link account / Update refresh token)
+
+
     user.setGoogleAccessToken(tokenResponse.getAccessToken());
     if (tokenResponse.getRefreshToken() != null) {
       user.setGoogleRefreshToken(tokenResponse.getRefreshToken());
@@ -132,7 +137,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     }
     repository.save(user);
 
-    // 4. Generate App JWT
+
+
     var jwtToken = jwtService.generateToken(user);
     var refreshToken = refreshTokenService.createRefreshToken(user.getEmail());
 
@@ -144,6 +150,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
   @Override
   public AuthResponse refreshToken(RefreshTokenRequest request) {
+    log.info("Refreshing token");
     return refreshTokenService
         .findByToken(request.getToken())
         .map(refreshTokenService::verifyExpiration)
@@ -167,7 +174,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             .findByEmail(userEmail)
             .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-    // Deletes the refresh token so the session cannot be renewed
+
+
     refreshTokenRepository.deleteByUser(user);
+    log.info("User logged out: {}", userEmail);
   }
 }

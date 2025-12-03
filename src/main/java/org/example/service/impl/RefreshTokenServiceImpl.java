@@ -10,12 +10,15 @@ import org.example.model.User;
 import org.example.repository.RefreshTokenRepository;
 import org.example.repository.UserRepository;
 import org.example.service.RefreshTokenService;
+import org.example.exception.TokenRefreshException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class RefreshTokenServiceImpl implements RefreshTokenService {
 
   @Value("${jwt.refresh-expiration}")
@@ -33,16 +36,16 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     // Check if a refresh token already exists for the user
     RefreshToken existingToken = refreshTokenRepository.findByUser(user).orElse(null);
     if (existingToken != null) {
-      // Update the existing token's expiry date and return it
-      existingToken.setExpiryDate(Instant.now().plus(30, ChronoUnit.DAYS));
+      existingToken.setExpiryDate(Instant.now().plusMillis(refreshTokenDurationMs));
+      log.info("Updated refresh token for user: {}", userEmail);
       return refreshTokenRepository.save(existingToken);
     }
 
-    // Create a new refresh token if none exists
     RefreshToken refreshToken = new RefreshToken();
     refreshToken.setUser(user);
     refreshToken.setToken(UUID.randomUUID().toString());
-    refreshToken.setExpiryDate(Instant.now().plus(30, ChronoUnit.DAYS));
+    refreshToken.setExpiryDate(Instant.now().plusMillis(refreshTokenDurationMs));
+    log.info("Created new refresh token for user: {}", userEmail);
     return refreshTokenRepository.save(refreshToken);
   }
 
@@ -53,7 +56,8 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
   public RefreshToken verifyExpiration(RefreshToken token) {
     if (token.getExpiryDate().compareTo(Instant.now()) < 0) {
       refreshTokenRepository.delete(token);
-      throw new RuntimeException("Refresh token was expired. Please make a new signin request");
+      log.warn("Refresh token expired and deleted: {}", token.getToken());
+      throw new TokenRefreshException("Refresh token was expired. Please make a new signin request");
     }
     return token;
   }

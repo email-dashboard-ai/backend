@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -17,6 +18,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
   private final JwtService jwtService;
@@ -50,12 +52,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                   userDetails, null, userDetails.getAuthorities());
           authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
           SecurityContextHolder.getContext().setAuthentication(authToken);
+          log.debug("User authenticated: {}", userEmail);
         }
       }
     } catch (IllegalArgumentException | io.jsonwebtoken.JwtException e) {
-      // Log the error but don't block the filter chain
-      logger.error("JWT validation failed: " + e.getMessage());
-      // Token is invalid, continue without authentication
+      log.error("JWT validation failed: {}", e.getMessage());
     }
 
     filterChain.doFilter(request, response);
