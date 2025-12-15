@@ -8,6 +8,7 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.example.ai.config.AiConfig;
 import org.example.ai.exception.AiException;
 import org.example.ai.model.AiSummaryResult;
@@ -15,16 +16,21 @@ import org.example.ai.provider.AiProviderRouter;
 import org.example.ai.util.GmailMessageTextExtractor;
 import org.example.ai.util.InMemoryTtlCache;
 import org.example.enums.ErrorCode;
+import org.example.model.EmailSummary;
+import org.example.repository.EmailSummaryRepository;
 import org.example.service.EmailService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AiSummaryService {
   private final AiConfig aiConfig;
   private final AiProviderRouter aiProviderRouter;
   private final EmailService emailService;
+  private final EmailSummaryRepository emailSummaryRepository;
+  private final EncryptionService encryptionService;
 
   private volatile InMemoryTtlCache<String, AiSummaryResult> cache;
 
@@ -41,11 +47,14 @@ public class AiSummaryService {
     }
 
     String input = buildInput(username, messageId, content);
-    String key = messageId + ":" + sha256Hex(input);
+    String contentHash = sha256Hex(input);
+    String cacheKey = messageId + ":" + contentHash;
 
-    Optional<AiSummaryResult> cached = cache().get(key);
-    if (cached.isPresent()) {
-      AiSummaryResult existing = cached.get();
+    // L1: Check in-memory cache first (fastest)
+    Optional<AiSummaryResult> memoryCached = cache().get(cacheKey);
+    if (memoryCached.isPresent()) {
+      log.debug("[CACHE HIT] messageId={}", messageId);
+      AiSummaryResult existing = memoryCached.get();
       return AiSummaryResult.builder()
           .summary(existing.getSummary())
           .provider(existing.getProvider())
@@ -55,8 +64,52 @@ public class AiSummaryService {
           .build();
     }
 
+    // L2: Check database (persists across restarts)
+    Optional<EmailSummary> dbCached = emailSummaryRepository.findByMessageIdAndUserEmailAndContentHash(
+        messageId, username, contentHash);
+    if (dbCached.isPresent()) {
+      log.debug("[DB HIT] messageId={}", messageId);
+      EmailSummary existing = dbCached.get();
+      // Decrypt summary from DB
+      String decryptedSummary = encryptionService.decrypt(existing.getSummary());
+      AiSummaryResult result = AiSummaryResult.builder()
+          .summary(decryptedSummary)
+          .provider(existing.getProvider())
+          .model(existing.getModel())
+          .cached(true)
+          .latencyMs(0)
+          .build();
+      // Populate L1 cache for faster subsequent access
+      cache().put(cacheKey, result);
+      return result;
+    }
+
+    // L3: Call AI provider
+    log.debug("[AI CALL] messageId={}", messageId);
     AiSummaryResult result = aiProviderRouter.summarize(input);
-    cache().put(key, result);
+
+    // Save to L1 cache
+    cache().put(cacheKey, result);
+
+    // Save to database for persistence (encrypted)
+    try {
+      // Encrypt summary before storing
+      String encryptedSummary = encryptionService.encrypt(result.getSummary());
+      EmailSummary entity = EmailSummary.builder()
+          .messageId(messageId)
+          .userEmail(username)
+          .contentHash(contentHash)
+          .summary(encryptedSummary)
+          .provider(result.getProvider())
+          .model(result.getModel())
+          .build();
+      emailSummaryRepository.save(entity);
+      log.debug("[DB SAVE] messageId={} (encrypted)", messageId);
+    } catch (Exception e) {
+      // Don't fail the request if DB save fails - we still have the result
+      log.warn("Failed to persist summary to DB for messageId={}: {}", messageId, e.getMessage());
+    }
+
     return result;
   }
 

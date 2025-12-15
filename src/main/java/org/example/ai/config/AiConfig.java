@@ -14,6 +14,7 @@ public class AiConfig {
 
   private Cache cache = new Cache();
   private Gemini gemini = new Gemini();
+  private Groq groq = new Groq();
 
   @Data
   public static class Cache {
@@ -24,7 +25,15 @@ public class AiConfig {
   @Data
   public static class Gemini {
     private String apiKey;
-    private String model = "gemini-1.5-flash";
+    private String model = "gemini-2.5-flash";
+    private int maxOutputTokens = 120;
+    private double temperature = 0.2;
+  }
+
+  @Data
+  public static class Groq {
+    private String apiKey;
+    private String model = "llama-3.3-70b-versatile";
     private int maxOutputTokens = 120;
     private double temperature = 0.2;
   }

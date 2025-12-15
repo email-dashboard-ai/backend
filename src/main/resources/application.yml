@@ -73,3 +73,8 @@ ai:
     model: ${AI_GEMINI_MODEL:gemini-2.5-flash}
     max-output-tokens: ${AI_GEMINI_MAX_OUTPUT_TOKENS:120}
     temperature: ${AI_GEMINI_TEMPERATURE:0.2}
+  groq:
+    api-key: ${GROQ_API_KEY:}
+    model: ${AI_GROQ_MODEL:llama-3.3-70b-versatile}
+    max-output-tokens: ${AI_GROQ_MAX_OUTPUT_TOKENS:120}
+    temperature: ${AI_GROQ_TEMPERATURE:0.2}
