@@ -31,7 +31,6 @@ A production-ready, secure email management backend service built with Spring Bo
 - **OAuth 2.0 Compliance**: Secure third-party authentication
 - **CORS Configuration**: Controlled cross-origin resource sharing
 
-
 ### 🏗️ **Modern Tech Stack**
 
 - **Backend**: Java 17+, Spring Boot 3.x, Spring Security 6, Hibernate/JPA
@@ -68,13 +67,26 @@ This application implements a sophisticated **"Dual Token Architecture"** that s
 
 - **Google Cloud Project** - Gmail API access
 
-
-
 ### 1. 🔧 Environment Setup
 
 ```bash
 cp .env.example .env
 ```
+
+### 1.1 🤖 AI Summary (Gemini / Google AI Studio)
+
+Set an API key from Google AI Studio on the backend:
+
+```bash
+export GOOGLE_AI_STUDIO_API_KEY="your-key"
+```
+
+The backend exposes an authenticated endpoint:
+
+- `POST /api/ai/email-summary`
+  - Body: `{ "messageId": "<gmailMessageId>", "content": "optional pre-decoded text" }`
+  - If `content` is provided, the backend summarizes it directly (avoids extra Gmail fetch latency).
+  - If `content` is omitted, the backend fetches the email by `messageId` and extracts text.
 
 ### 2. 🔑 Google Cloud Setup
 
@@ -121,6 +133,7 @@ docker compose down
 - 🗄️ **Database**: localhost:5432
 
 ---
+
 **Format code:**
 
 ```bash
