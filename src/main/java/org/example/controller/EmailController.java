@@ -3,13 +3,17 @@ package org.example.controller;
 import com.google.api.services.gmail.model.Label;
 import com.google.api.services.gmail.model.Message;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.example.config.AppConfig;
 import org.example.dto.request.ReplyEmailRequest;
 import org.example.dto.request.SendEmailRequest;
+import org.example.dto.request.SnoozeEmailRequest;
 import org.example.helper.ResponseWrapper;
 import org.example.service.EmailService;
 import org.example.dto.response.EmailPageResponse;
@@ -192,5 +196,17 @@ public class EmailController {
     return org.springframework.http.ResponseEntity.ok()
         .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"attachment\"")
         .body(data);
+  }
+
+  @Operation(summary = "Snooze email", description = "Snooze an email until a specified time")
+  @PostMapping("/{emailId}/snooze")
+  public ResponseWrapper<Void> snoozedEmail(
+      @AuthenticationPrincipal UserDetails userdDetails,
+      @Parameter(description = "Gmail message ID", example = "18d4a2b3c5e6f7g8") @PathVariable String emailId,
+      @Valid @RequestBody SnoozeEmailRequest request) {
+
+    emailService.snoozeEmail(userdDetails.getUsername(), emailId, request.getSnoozedUntil());
+
+    return ResponseWrapper.success("Snoozed email successfully");
   }
 }

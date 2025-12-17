@@ -54,5 +54,9 @@ public interface EmailProviderStrategy {
       String body,
       List<MultipartFile> attachments);
 
+  String getSnoozedLabelId(User user);
+
+  void modifyLabels(User user, String emailId, List<String> addLabelIds, List<String> removeLabelIds);
+
   AuthProvider getSupportedProvider();
 }

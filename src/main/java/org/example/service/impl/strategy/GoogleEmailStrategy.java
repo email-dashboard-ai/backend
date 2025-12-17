@@ -10,6 +10,8 @@ import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.Label;
 import com.google.api.services.gmail.model.Message;
+import com.google.api.services.gmail.model.ModifyMessageRequest;
+
 import jakarta.activation.DataHandler;
 import jakarta.activation.DataSource;
 import jakarta.mail.MessagingException;
@@ -25,10 +27,17 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
+
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+import org.checkerframework.checker.units.qual.s;
 import org.example.dto.response.EmailPageResponse;
 import org.example.enums.AuthProvider;
+import org.example.exception.GmailNetworkException;
 import org.example.exception.GmailServiceException;
 import org.example.model.User;
 import org.example.repository.UserRepository;
@@ -38,9 +47,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class GoogleEmailStrategy implements EmailProviderStrategy {
 
   private final UserRepository userRepository;
+  private final Map<String, String> snoozedLabelCache = new ConcurrentHashMap<>();
 
   @Value("${google.client.id}")
   private String googleClientId;
@@ -175,10 +186,9 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
         user,
         () -> {
           Gmail service = getGmailClient(user);
-          com.google.api.services.gmail.model.BatchModifyMessagesRequest batchRequest =
-              new com.google.api.services.gmail.model.BatchModifyMessagesRequest()
-                  .setIds(messageIds)
-                  .setAddLabelIds(java.util.Collections.singletonList("TRASH"));
+          com.google.api.services.gmail.model.BatchModifyMessagesRequest batchRequest = new com.google.api.services.gmail.model.BatchModifyMessagesRequest()
+              .setIds(messageIds)
+              .setAddLabelIds(java.util.Collections.singletonList("TRASH"));
           service.users().messages().batchModify("me", batchRequest).execute();
           return null;
         });
@@ -190,10 +200,9 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
         user,
         () -> {
           Gmail service = getGmailClient(user);
-          com.google.api.services.gmail.model.BatchModifyMessagesRequest batchRequest =
-              new com.google.api.services.gmail.model.BatchModifyMessagesRequest()
-                  .setIds(messageIds)
-                  .setRemoveLabelIds(java.util.Collections.singletonList("UNREAD"));
+          com.google.api.services.gmail.model.BatchModifyMessagesRequest batchRequest = new com.google.api.services.gmail.model.BatchModifyMessagesRequest()
+              .setIds(messageIds)
+              .setRemoveLabelIds(java.util.Collections.singletonList("UNREAD"));
           service.users().messages().batchModify("me", batchRequest).execute();
           return null;
         });
@@ -205,10 +214,9 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
         user,
         () -> {
           Gmail service = getGmailClient(user);
-          com.google.api.services.gmail.model.BatchModifyMessagesRequest batchRequest =
-              new com.google.api.services.gmail.model.BatchModifyMessagesRequest()
-                  .setIds(messageIds)
-                  .setAddLabelIds(java.util.Collections.singletonList("UNREAD"));
+          com.google.api.services.gmail.model.BatchModifyMessagesRequest batchRequest = new com.google.api.services.gmail.model.BatchModifyMessagesRequest()
+              .setIds(messageIds)
+              .setAddLabelIds(java.util.Collections.singletonList("UNREAD"));
           service.users().messages().batchModify("me", batchRequest).execute();
           return null;
         });
@@ -230,8 +238,7 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
 
     long maxResults = (long) limit;
 
-    var listRequest =
-        service.users().messages().list("me").setLabelIds(List.of(labelId)).setMaxResults(maxResults);
+    var listRequest = service.users().messages().list("me").setLabelIds(List.of(labelId)).setMaxResults(maxResults);
 
     if (pageToken != null && !pageToken.isEmpty()) {
       listRequest.setPageToken(pageToken);
@@ -247,28 +254,25 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
           .build();
     }
 
-    List<java.util.concurrent.CompletableFuture<Message>> futures =
-        messages.stream()
-            .map(
-                msg ->
-                    java.util.concurrent.CompletableFuture.supplyAsync(
-                        () -> {
-                          try {
-                            return service
-                                .users()
-                                .messages()
-                                .get("me", msg.getId())
-                                .setFormat("metadata")
-                                .setMetadataHeaders(List.of("Subject", "From", "To", "Date"))
-                                .execute();
-                          } catch (IOException e) {
-                            throw new RuntimeException(e);
-                          }
-                        }))
-            .toList();
+    List<java.util.concurrent.CompletableFuture<Message>> futures = messages.stream()
+        .map(
+            msg -> java.util.concurrent.CompletableFuture.supplyAsync(
+                () -> {
+                  try {
+                    return service
+                        .users()
+                        .messages()
+                        .get("me", msg.getId())
+                        .setFormat("metadata")
+                        .setMetadataHeaders(List.of("Subject", "From", "To", "Date"))
+                        .execute();
+                  } catch (IOException e) {
+                    throw new RuntimeException(e);
+                  }
+                }))
+        .toList();
 
-    List<Message> detailedMessages =
-        futures.stream().map(java.util.concurrent.CompletableFuture::join).toList();
+    List<Message> detailedMessages = futures.stream().map(java.util.concurrent.CompletableFuture::join).toList();
 
     return EmailPageResponse.builder()
         .messages(detailedMessages)
@@ -290,8 +294,7 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
   private byte[] executeGetAttachment(User user, String messageId, String attachmentId)
       throws IOException {
     Gmail service = getGmailClient(user);
-    var attachmentPart =
-        service.users().messages().attachments().get("me", messageId, attachmentId).execute();
+    var attachmentPart = service.users().messages().attachments().get("me", messageId, attachmentId).execute();
     return attachmentPart.decodeData();
   }
 
@@ -320,14 +323,13 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
       throws IOException, MessagingException {
     Gmail service = getGmailClient(user);
 
-    Message originalMessage =
-        service
-            .users()
-            .messages()
-            .get("me", messageId)
-            .setFormat("metadata")
-            .setMetadataHeaders(List.of("Subject", "Message-ID", "References", "From", "Reply-To"))
-            .execute();
+    Message originalMessage = service
+        .users()
+        .messages()
+        .get("me", messageId)
+        .setFormat("metadata")
+        .setMetadataHeaders(List.of("Subject", "Message-ID", "References", "From", "Reply-To"))
+        .execute();
 
     String subject = "";
     String originalMessageId = "";
@@ -410,13 +412,12 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
 
   private Gmail getGmailClient(User user) {
     try {
-      GoogleCredential credential =
-          new GoogleCredential().setAccessToken(user.getGoogleAccessToken());
+      GoogleCredential credential = new GoogleCredential().setAccessToken(user.getGoogleAccessToken());
 
       return new Gmail.Builder(
-              GoogleNetHttpTransport.newTrustedTransport(),
-              GsonFactory.getDefaultInstance(),
-              credential)
+          GoogleNetHttpTransport.newTrustedTransport(),
+          GsonFactory.getDefaultInstance(),
+          credential)
           .setApplicationName(applicationName)
           .build();
 
@@ -430,14 +431,13 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
       throw new RuntimeException("No Google Refresh Token available for user " + user.getEmail());
     }
 
-    GoogleTokenResponse response =
-        new GoogleRefreshTokenRequest(
-                new NetHttpTransport(),
-                new GsonFactory(),
-                user.getGoogleRefreshToken(),
-                googleClientId,
-                googleClientSecret)
-            .execute();
+    GoogleTokenResponse response = new GoogleRefreshTokenRequest(
+        new NetHttpTransport(),
+        new GsonFactory(),
+        user.getGoogleRefreshToken(),
+        googleClientId,
+        googleClientSecret)
+        .execute();
 
     String newAccessToken = response.getAccessToken();
 
@@ -546,6 +546,125 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
       }
     } catch (Exception e) {
       throw new RuntimeException("Unexpected Error", e);
+    }
+  }
+
+  private String createLabel(Gmail gmail, String labelName) {
+    try {
+      Label label = new Label()
+          .setName(labelName)
+          .setLabelListVisibility("labelShow")
+          .setMessageListVisibility("show")
+          .setType("user");
+
+      Label createdLabel = gmail.users().labels().create("me", label).execute();
+
+      log.info("Label created: {}", createdLabel.getId());
+      return createdLabel.getId();
+
+    } catch (GoogleJsonResponseException e) {
+      if (e.getStatusCode() == 409) {
+        log.warn("Label '{}' already exists, fetching existing label", labelName);
+        return findExistingLabelId(gmail, labelName);
+      }
+      throw new GmailServiceException(e);
+    } catch (IOException e) {
+      throw new GmailNetworkException(e);
+    }
+  }
+
+  private String findExistingLabelId(Gmail gmail, String labelName) {
+    try {
+      List<Label> labels = gmail.users().labels()
+          .list("me")
+          .execute()
+          .getLabels();
+
+      for (Label label : labels) {
+        if (label.getName().equals(labelName)) {
+          return label.getId();
+        }
+      }
+
+      log.error("Label '{}' should exist but not found", labelName);
+
+      throw new RuntimeException("Label " + labelName + " should exist but not found");
+    } catch (GoogleJsonResponseException e) {
+      throw new GmailServiceException(e);
+    } catch (IOException e) {
+      throw new GmailNetworkException(e);
+    }
+  }
+
+  @Override
+  public String getSnoozedLabelId(User user) {
+    String cacheKey = user.getEmail();
+
+    if (snoozedLabelCache.containsKey(cacheKey)) {
+      log.info("Using cached SNOOZED label Id for user: {}", cacheKey);
+      return snoozedLabelCache.get(cacheKey);
+    }
+
+    try {
+      Gmail gmail = getGmailClient(user);
+
+      List<Label> labels = gmail.users().labels()
+          .list("me")
+          .execute()
+          .getLabels();
+
+      for (Label label : labels) {
+        if ("SNOOZED".equals(label.getName())) {
+          String labelId = label.getId();
+          snoozedLabelCache.put(cacheKey, labelId);
+
+          log.info("Found and cached SNOOZED label: {}", labelId);
+          return labelId;
+        }
+      }
+
+      log.info("SNOOZED label not found, create new one");
+
+      String snoozedLabelId = createLabel(gmail, "SNOOZED");
+      snoozedLabelCache.put(cacheKey, snoozedLabelId);
+
+      return snoozedLabelId;
+    } catch (GoogleJsonResponseException e) {
+      throw new GmailNetworkException(e);
+    } catch (IOException e) {
+      throw new GmailNetworkException(e);
+    }
+  }
+
+  @Override
+  public void modifyLabels(User user, String emailId, List<String> addLabelIds, List<String> removeLabelIds) {
+    if (emailId == null || emailId.trim().isEmpty()) {
+      throw new IllegalArgumentException("Email ID is required.");
+    }
+
+    if ((addLabelIds == null || addLabelIds.isEmpty()) &&
+        (removeLabelIds == null || removeLabelIds.isEmpty())) {
+      log.warn("No labels to modify for email {}, skipping API call", emailId);
+      return;
+    }
+
+    try {
+      Gmail gmail = getGmailClient(user);
+
+      ModifyMessageRequest request = new ModifyMessageRequest()
+          .setAddLabelIds(addLabelIds)
+          .setRemoveLabelIds(removeLabelIds);
+
+      gmail.users().messages()
+          .modify(emailId, emailId, request)
+          .execute();
+
+      log.info("Modified labels for email {}: added={}, removed={}",
+          emailId, addLabelIds, removeLabelIds);
+    } catch (GoogleJsonResponseException e) {
+      throw new GmailServiceException(e);
+    } catch (IOException e) {
+      throw new GmailNetworkException(e);
     }
   }
 }

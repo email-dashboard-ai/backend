@@ -3,7 +3,10 @@ package org.example.model;
 import jakarta.persistence.*;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
+
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import org.example.enums.AuthProvider;
 import org.springframework.security.core.GrantedAuthority;
@@ -13,7 +16,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 @Table(name = "users")
 @Data
 @NoArgsConstructor
-public class User implements UserDetails {
+@EqualsAndHashCode(callSuper = false)
+public class User extends BaseEntity implements UserDetails {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
@@ -34,6 +38,9 @@ public class User implements UserDetails {
 
   @Column(length = 2048)
   private String googleRefreshToken;
+
+  @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+  private Set<SnoozedEmail> snoozedEmails;
 
   @Override
   public Collection<? extends GrantedAuthority> getAuthorities() {

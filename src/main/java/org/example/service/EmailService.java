@@ -4,7 +4,7 @@ import com.google.api.services.gmail.model.Label;
 import com.google.api.services.gmail.model.Message;
 import java.util.List;
 import org.springframework.web.multipart.MultipartFile;
-
+import java.time.Instant;
 import org.example.dto.response.EmailPageResponse;
 
 public interface EmailService {
@@ -51,4 +51,6 @@ public interface EmailService {
   byte[] getAttachment(String username, String messageId, String attachmentId);
 
   List<Message> getThreadMessages(String username, String threadId);
+
+  void snoozeEmail(String username, String emailId, Instant snoozedUntil);
 }

@@ -3,10 +3,12 @@ package org.example.model;
 import jakarta.persistence.*;
 import java.time.Instant;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 @Entity
 @Data
-public class RefreshToken {
+@EqualsAndHashCode(callSuper = false)
+public class RefreshToken extends BaseEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)

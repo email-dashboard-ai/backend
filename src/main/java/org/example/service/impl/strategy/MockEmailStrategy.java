@@ -123,4 +123,14 @@ public class MockEmailStrategy implements EmailProviderStrategy {
     // Mock implementation: return a list containing a single mock message
     return List.of(getEmailDetails(user, threadId)); // Assuming threadId matches messageId for mock
   }
+
+  @Override
+  public String getSnoozedLabelId(User user) {
+    return "SNOOZED";
+  }
+
+  @Override
+  public void modifyLabels(User user, String emailId, List<String> addLabelIds, List<String> removeLabelIds) {
+    // No implementation yet
+  }
 }
