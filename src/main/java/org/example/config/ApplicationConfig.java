@@ -1,7 +1,11 @@
 package org.example.config;
 
 import lombok.RequiredArgsConstructor;
+import org.example.enums.AuthProvider;
 import org.example.repository.UserRepository;
+import org.example.service.impl.strategy.EmailProviderStrategy;
+import org.example.service.impl.strategy.GoogleEmailStrategy;
+import org.example.service.impl.strategy.MockEmailStrategy;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
@@ -13,6 +17,11 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Configuration
 @EnableJpaAuditing
@@ -45,5 +54,14 @@ public class ApplicationConfig {
   @Bean
   public PasswordEncoder passwordEncoder() {
     return new BCryptPasswordEncoder();
+  }
+
+  @Bean
+  public Map<AuthProvider, EmailProviderStrategy> emailProviderStrategies(
+      List<EmailProviderStrategy> strategies) {
+    return strategies.stream()
+        .collect(Collectors.toMap(
+            EmailProviderStrategy::getSupportedProvider,
+            Function.identity()));
   }
 }

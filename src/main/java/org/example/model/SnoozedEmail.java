@@ -21,7 +21,7 @@ public class SnoozedEmail extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER) // Changed to EAGER to fix scheduler lazy loading issue
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 

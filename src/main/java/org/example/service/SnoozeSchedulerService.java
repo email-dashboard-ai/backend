@@ -12,6 +12,7 @@ import org.example.repository.SnoozedEmailRepository;
 import org.example.service.impl.strategy.EmailProviderStrategy;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +24,8 @@ public class SnoozeSchedulerService {
     private final SnoozedEmailRepository snoozedEmailRepository;
     private final Map<AuthProvider, EmailProviderStrategy> strategies;
 
-    @Scheduled(fixedRate = 60000)
+    @Scheduled(fixedRate = 30000)
+    @Transactional // Fix: Ensure Hibernate session is active for lazy loading
     public void wakeUpSnoozeEmail() {
         log.info("Running scheduled task to check for snoozed emails...");
         List<SnoozedEmail> dueEmails = snoozedEmailRepository.findBySnoozedUntilBefore(Instant.now());

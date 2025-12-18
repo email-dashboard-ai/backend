@@ -648,7 +648,7 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
       return;
     }
 
-    try {
+    executeWithRetry(user, () -> {
       Gmail gmail = getGmailClient(user);
 
       ModifyMessageRequest request = new ModifyMessageRequest()
@@ -656,15 +656,12 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
           .setRemoveLabelIds(removeLabelIds);
 
       gmail.users().messages()
-          .modify(emailId, emailId, request)
+          .modify("me", emailId, request) // Fixed: use "me" as userId, not emailId
           .execute();
 
       log.info("Modified labels for email {}: added={}, removed={}",
           emailId, addLabelIds, removeLabelIds);
-    } catch (GoogleJsonResponseException e) {
-      throw new GmailServiceException(e);
-    } catch (IOException e) {
-      throw new GmailNetworkException(e);
-    }
+      return null;
+    });
   }
 }
