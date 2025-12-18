@@ -9,6 +9,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.example.ai.exception.AiException;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -119,6 +120,21 @@ public class GlobalExceptionHandler {
         HttpStatus.INTERNAL_SERVER_ERROR,
         ErrorCode.ERR_GMAIL_SERVICE,
         "Network error communicating with Gmail. Please check your connection.");
+  }
+
+  @ExceptionHandler(AiException.class)
+  public ResponseEntity<ResponseWrapper<Void>> handleAiException(AiException ex) {
+    if (ex.getCause() != null) {
+      log.warn(
+          "AI error [{} {}]: {} (cause: {})",
+          ex.getHttpStatus(),
+          ex.getErrorCode(),
+          ex.getMessage(),
+          ex.getCause().toString());
+    } else {
+      log.warn("AI error [{} {}]: {}", ex.getHttpStatus(), ex.getErrorCode(), ex.getMessage());
+    }
+    return buildResponse(ex.getHttpStatus(), ex.getErrorCode(), ex.getMessage());
   }
 
   @ExceptionHandler(Exception.class)

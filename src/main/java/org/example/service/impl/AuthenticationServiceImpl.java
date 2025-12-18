@@ -2,6 +2,7 @@ package org.example.service.impl;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeTokenRequest;
 import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
+import com.google.api.client.http.HttpRequest;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import jakarta.transaction.Transactional;
@@ -95,15 +96,22 @@ public class AuthenticationServiceImpl implements AuthenticationService {
   @Override
   public AuthResponse authenticateGoogle(GoogleAuthRequest request) throws IOException {
     log.info("Authenticating with Google");
-    GoogleTokenResponse tokenResponse = new GoogleAuthorizationCodeTokenRequest(
+    GoogleAuthorizationCodeTokenRequest tokenRequest = new GoogleAuthorizationCodeTokenRequest(
         new NetHttpTransport(),
         new GsonFactory(),
         appConfig.getGoogle().getTokenUri(),
         googleClientId,
         googleClientSecret,
         request.getAuthCode(),
-        appConfig.getGoogle().getRedirectUri())
-        .execute();
+        appConfig.getGoogle().getRedirectUri());
+
+    tokenRequest.setRequestInitializer(
+        (HttpRequest httpRequest) -> {
+          httpRequest.setConnectTimeout(appConfig.getGoogle().getConnectTimeoutMs());
+          httpRequest.setReadTimeout(appConfig.getGoogle().getReadTimeoutMs());
+        });
+
+    GoogleTokenResponse tokenResponse = tokenRequest.execute();
 
     String email = tokenResponse.parseIdToken().getPayload().getEmail();
     String name = (String) tokenResponse.parseIdToken().getPayload().get("name");

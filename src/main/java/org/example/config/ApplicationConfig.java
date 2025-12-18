@@ -4,8 +4,6 @@ import lombok.RequiredArgsConstructor;
 import org.example.enums.AuthProvider;
 import org.example.repository.UserRepository;
 import org.example.service.impl.strategy.EmailProviderStrategy;
-import org.example.service.impl.strategy.GoogleEmailStrategy;
-import org.example.service.impl.strategy.MockEmailStrategy;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
