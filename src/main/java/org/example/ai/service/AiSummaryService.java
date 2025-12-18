@@ -2,11 +2,6 @@ package org.example.ai.service;
 
 import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.MessagePartHeader;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.util.HexFormat;
-import java.util.List;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.ai.config.AiConfig;
@@ -21,6 +16,12 @@ import org.example.repository.EmailSummaryRepository;
 import org.example.service.EmailService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.HexFormat;
+import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -60,6 +61,7 @@ public class AiSummaryService {
           .provider(existing.getProvider())
           .model(existing.getModel())
           .cached(true)
+          .source("memory")
           .latencyMs(0)
           .build();
     }
@@ -77,6 +79,7 @@ public class AiSummaryService {
           .provider(existing.getProvider())
           .model(existing.getModel())
           .cached(true)
+          .source("database")
           .latencyMs(0)
           .build();
       // Populate L1 cache for faster subsequent access

@@ -39,6 +39,7 @@ public class AiSummaryController {
             .provider(result.getProvider())
             .model(result.getModel())
             .cached(result.isCached())
+            .source(result.getSource())
             .latencyMs(result.getLatencyMs())
             .build();
 

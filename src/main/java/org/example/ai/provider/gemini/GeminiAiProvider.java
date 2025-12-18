@@ -2,11 +2,6 @@ package org.example.ai.provider.gemini;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import org.example.ai.config.AiConfig;
 import org.example.ai.exception.AiException;
@@ -16,6 +11,12 @@ import org.example.ai.provider.AiProvider;
 import org.example.enums.ErrorCode;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 
 @Service
 @RequiredArgsConstructor
@@ -81,22 +82,23 @@ public class GeminiAiProvider implements AiProvider {
                   .put("temperature", aiConfig.getGemini().getTemperature())
                   .put("maxOutputTokens", aiConfig.getGemini().getMaxOutputTokens()));
 
-      HttpClient client =
-          HttpClient.newBuilder()
-              .connectTimeout(Duration.ofMillis(aiConfig.getTimeoutMs()))
-              .build();
+        HttpResponse<String> response;
+        try (HttpClient client = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofMillis(aiConfig.getTimeoutMs()))
+                .build()) {
 
-      HttpRequest request =
-          HttpRequest.newBuilder()
-              .uri(URI.create(url))
-              .timeout(Duration.ofMillis(aiConfig.getTimeoutMs()))
-              .header("Content-Type", "application/json")
-              .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(payload)))
-              .build();
+            HttpRequest request =
+                    HttpRequest.newBuilder()
+                            .uri(URI.create(url))
+                            .timeout(Duration.ofMillis(aiConfig.getTimeoutMs()))
+                            .header("Content-Type", "application/json")
+                            .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(payload)))
+                            .build();
 
-      HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        }
 
-      if (response.statusCode() < 200 || response.statusCode() >= 300) {
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
         String body = truncate(response.body());
         int status = response.statusCode();
         if (status == 401 || status == 403) {
@@ -142,6 +144,7 @@ public class GeminiAiProvider implements AiProvider {
           .provider("gemini")
           .model(model)
           .cached(false)
+          .source("api:gemini")
           .latencyMs(latencyMs)
           .build();
     } catch (AiException ex) {

@@ -10,5 +10,6 @@ public class AiSummaryResult {
   String provider;
   String model;
   boolean cached;
+  String source; // "memory", "database", or "api"
   long latencyMs;
 }

@@ -11,7 +11,6 @@ import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.Label;
 import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.ModifyMessageRequest;
-
 import jakarta.activation.DataHandler;
 import jakarta.activation.DataSource;
 import jakarta.mail.MessagingException;
@@ -22,19 +21,8 @@ import jakarta.mail.internet.MimeMessage;
 import jakarta.mail.internet.MimeMessage.RecipientType;
 import jakarta.mail.internet.MimeMultipart;
 import jakarta.mail.util.ByteArrayDataSource;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.ConcurrentHashMap;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
-import org.checkerframework.checker.units.qual.s;
 import org.example.dto.response.EmailPageResponse;
 import org.example.enums.AuthProvider;
 import org.example.exception.GmailNetworkException;
@@ -44,6 +32,11 @@ import org.example.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -227,16 +220,16 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
   // ===============================================================================================
 
   private List<Label> executeGetLabels(User user)
-      throws IOException, java.security.GeneralSecurityException {
+      throws IOException {
     Gmail service = getGmailClient(user);
     return service.users().labels().list("me").execute().getLabels();
   }
 
   private EmailPageResponse executeGetEmails(User user, String labelId, String pageToken, int limit)
-      throws IOException, java.security.GeneralSecurityException {
+      throws IOException {
     Gmail service = getGmailClient(user);
 
-    long maxResults = (long) limit;
+    long maxResults = limit;
 
     var listRequest = service.users().messages().list("me").setLabelIds(List.of(labelId)).setMaxResults(maxResults);
 
@@ -426,7 +419,7 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
     }
   }
 
-  private String refreshAccessToken(User user) throws IOException {
+  private void refreshAccessToken(User user) throws IOException {
     if (user.getGoogleRefreshToken() == null) {
       throw new RuntimeException("No Google Refresh Token available for user " + user.getEmail());
     }
@@ -443,8 +436,6 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
 
     user.setGoogleAccessToken(newAccessToken);
     userRepository.save(user);
-
-    return newAccessToken;
   }
 
   private MimeMessage createMimeMessage(
@@ -629,8 +620,6 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
       snoozedLabelCache.put(cacheKey, snoozedLabelId);
 
       return snoozedLabelId;
-    } catch (GoogleJsonResponseException e) {
-      throw new GmailNetworkException(e);
     } catch (IOException e) {
       throw new GmailNetworkException(e);
     }

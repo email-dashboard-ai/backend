@@ -10,6 +10,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
@@ -18,6 +20,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class MockDataHelper {
 
+  @Getter
   private List<Label> mockLabels;
   private List<Message> mockMessages;
 
@@ -50,11 +53,7 @@ public class MockDataHelper {
     }
   }
 
-  public List<Label> getMockLabels() {
-    return mockLabels;
-  }
-
-  // Implements Pagination and Filter by Label
+    // Implements Pagination and Filter by Label
   public List<Message> getMockMessages(String labelId, int page, int limit) {
     if (mockMessages == null) return Collections.emptyList();
 
