@@ -42,11 +42,7 @@ public class GroqAiProvider implements AiProvider {
     }
 
     String model = aiConfig.getGroq().getModel();
-    String prompt =
-        "Summarize the following email for a Kanban card in 1-2 concise sentences. "
-            + "Do not include greetings or signatures.\n\nEMAIL:\n"
-            + inputText
-            + "\n\nSUMMARY:";
+    String prompt = aiConfig.getSummaryPrompt() + "\n\nEMAIL:\n" + inputText + "\n\nSUMMARY:";
 
     long start = System.nanoTime();
     try {

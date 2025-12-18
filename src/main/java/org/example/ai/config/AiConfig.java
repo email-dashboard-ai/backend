@@ -8,9 +8,10 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @ConfigurationProperties(prefix = "ai")
 public class AiConfig {
-  private String provider = "gemini";
-  private int timeoutMs = 15000;
-  private int maxInputChars = 12000;
+  private String provider;
+  private int timeoutMs;
+  private int maxInputChars;
+  private String summaryPrompt = "You are an email assistant. Summarize the following email in 1-2 concise sentences for a Kanban task card. Focus on: the main action required or key information, who is involved, and any deadlines if mentioned. Ignore greetings, signatures, and promotional content. Be direct and actionable.";
 
   private Cache cache = new Cache();
   private Gemini gemini = new Gemini();
