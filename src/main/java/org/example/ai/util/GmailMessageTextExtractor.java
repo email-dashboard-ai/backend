@@ -3,10 +3,9 @@ package org.example.ai.util;
 import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.MessagePart;
 import com.google.api.services.gmail.model.MessagePartBody;
-import org.jsoup.Jsoup;
-
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import org.jsoup.Jsoup;
 
 public class GmailMessageTextExtractor {
 
@@ -44,9 +43,11 @@ public class GmailMessageTextExtractor {
 
     while (!stack.isEmpty()) {
       MessagePart part = stack.pop();
-        String mimeType = part.getMimeType();
+      String mimeType = part.getMimeType();
       if (mimeType != null
-          && mimeType.toLowerCase(Locale.ROOT).startsWith(desiredMimeType.toLowerCase(Locale.ROOT))) {
+          && mimeType
+              .toLowerCase(Locale.ROOT)
+              .startsWith(desiredMimeType.toLowerCase(Locale.ROOT))) {
         String content = readPartBody(part, attachmentFetcher);
         if (content != null && !content.isBlank()) {
           return Optional.of(content);

@@ -3,8 +3,8 @@ package org.example.config;
 import java.util.Arrays;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.example.security.JwtAuthenticationFilter;
 import org.example.security.JwtAuthenticationEntryPoint;
+import org.example.security.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -47,12 +47,7 @@ public class SecurityConfig {
         .cors(cors -> cors.configurationSource(corsConfigurationSource()))
         .exceptionHandling(e -> e.authenticationEntryPoint(jwtAuthenticationEntryPoint))
         .authorizeHttpRequests(
-            auth ->
-                auth.requestMatchers(WHITE_LIST_URL)
-                    .permitAll()
-                    .anyRequest()
-                    .authenticated()
-            )
+            auth -> auth.requestMatchers(WHITE_LIST_URL).permitAll().anyRequest().authenticated())
         .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authenticationProvider(authenticationProvider)
         .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

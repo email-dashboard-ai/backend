@@ -25,12 +25,16 @@ public class AiSummaryController {
 
   private final AiSummaryService aiSummaryService;
 
-  @Operation(summary = "Summarize an email", description = "Returns a short AI summary for a single email.")
+  @Operation(
+      summary = "Summarize an email",
+      description = "Returns a short AI summary for a single email.")
   @PostMapping("/email-summary")
   public ResponseWrapper<AiEmailSummaryResponse> summarizeEmail(
-      @AuthenticationPrincipal UserDetails userDetails, @RequestBody AiEmailSummaryRequest request) {
+      @AuthenticationPrincipal UserDetails userDetails,
+      @RequestBody AiEmailSummaryRequest request) {
     AiSummaryResult result =
-        aiSummaryService.summarizeEmail(userDetails.getUsername(), request.getMessageId(), request.getContent());
+        aiSummaryService.summarizeEmail(
+            userDetails.getUsername(), request.getMessageId(), request.getContent());
 
     AiEmailSummaryResponse response =
         AiEmailSummaryResponse.builder()

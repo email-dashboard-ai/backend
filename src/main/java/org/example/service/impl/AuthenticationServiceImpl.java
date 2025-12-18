@@ -8,6 +8,7 @@ import com.google.api.client.json.gson.GsonFactory;
 import jakarta.transaction.Transactional;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.example.config.AppConfig;
 import org.example.dto.request.AuthRequest;
 import org.example.dto.request.GoogleAuthRequest;
@@ -30,8 +31,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
-import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
@@ -80,9 +79,10 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     authenticationManager.authenticate(
         new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
 
-    var user = repository
-        .findByEmail(request.getEmail())
-        .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+    var user =
+        repository
+            .findByEmail(request.getEmail())
+            .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
     var jwtToken = jwtService.generateToken(user);
     var refreshToken = refreshTokenService.createRefreshToken(user.getEmail());
@@ -96,14 +96,15 @@ public class AuthenticationServiceImpl implements AuthenticationService {
   @Override
   public AuthResponse authenticateGoogle(GoogleAuthRequest request) throws IOException {
     log.info("Authenticating with Google");
-    GoogleAuthorizationCodeTokenRequest tokenRequest = new GoogleAuthorizationCodeTokenRequest(
-        new NetHttpTransport(),
-        new GsonFactory(),
-        appConfig.getGoogle().getTokenUri(),
-        googleClientId,
-        googleClientSecret,
-        request.getAuthCode(),
-        appConfig.getGoogle().getRedirectUri());
+    GoogleAuthorizationCodeTokenRequest tokenRequest =
+        new GoogleAuthorizationCodeTokenRequest(
+            new NetHttpTransport(),
+            new GsonFactory(),
+            appConfig.getGoogle().getTokenUri(),
+            googleClientId,
+            googleClientSecret,
+            request.getAuthCode(),
+            appConfig.getGoogle().getRedirectUri());
 
     tokenRequest.setRequestInitializer(
         (HttpRequest httpRequest) -> {
@@ -117,17 +118,18 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     String name = (String) tokenResponse.parseIdToken().getPayload().get("name");
     String picture = (String) tokenResponse.parseIdToken().getPayload().get("picture");
 
-    User user = repository
-        .findByEmail(email)
-        .orElseGet(
-            () -> {
-              User newUser = new User();
-              newUser.setEmail(email);
-              newUser.setName(name);
-              newUser.setAvatar(picture);
-              newUser.setProvider(AuthProvider.GOOGLE);
-              return newUser;
-            });
+    User user =
+        repository
+            .findByEmail(email)
+            .orElseGet(
+                () -> {
+                  User newUser = new User();
+                  newUser.setEmail(email);
+                  newUser.setName(name);
+                  newUser.setAvatar(picture);
+                  newUser.setProvider(AuthProvider.GOOGLE);
+                  return newUser;
+                });
 
     user.setGoogleAccessToken(tokenResponse.getAccessToken());
     if (tokenResponse.getRefreshToken() != null) {
@@ -168,9 +170,10 @@ public class AuthenticationServiceImpl implements AuthenticationService {
   @Override
   @Transactional
   public void logout(String userEmail) {
-    var user = repository
-        .findByEmail(userEmail)
-        .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+    var user =
+        repository
+            .findByEmail(userEmail)
+            .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
     refreshTokenRepository.deleteByUser(user);
     log.info("User logged out: {}", userEmail);

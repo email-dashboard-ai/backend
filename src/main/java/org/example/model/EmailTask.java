@@ -1,18 +1,17 @@
 package org.example.model;
 
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.example.enums.KanbanStatus;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.LocalDateTime;
-
 @Entity
-@Table(name = "email_tasks", uniqueConstraints = {
-    @UniqueConstraint(columnNames = {"email_id", "user_id"})
-})
+@Table(
+    name = "email_tasks",
+    uniqueConstraints = {@UniqueConstraint(columnNames = {"email_id", "user_id"})})
 @Data
 @NoArgsConstructor
 public class EmailTask {

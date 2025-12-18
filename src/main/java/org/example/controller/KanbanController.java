@@ -21,7 +21,9 @@ public class KanbanController {
 
   private final EmailTaskService emailTaskService;
 
-  @Operation(summary = "Get Kanban Statuses", description = "Returns a map of email IDs to their Kanban status.")
+  @Operation(
+      summary = "Get Kanban Statuses",
+      description = "Returns a map of email IDs to their Kanban status.")
   @GetMapping("/statuses")
   public ResponseWrapper<Map<String, KanbanStatus>> getStatuses(
       @AuthenticationPrincipal UserDetails userDetails) {
@@ -30,7 +32,9 @@ public class KanbanController {
         "Statuses fetched successfully");
   }
 
-  @Operation(summary = "Update Email Status", description = "Updates the Kanban status of an email.")
+  @Operation(
+      summary = "Update Email Status",
+      description = "Updates the Kanban status of an email.")
   @PostMapping("/status")
   public ResponseWrapper<Void> updateStatus(
       @AuthenticationPrincipal UserDetails userDetails,

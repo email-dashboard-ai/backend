@@ -2,6 +2,11 @@ package org.example.ai.service;
 
 import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.MessagePartHeader;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.HexFormat;
+import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.ai.config.AiConfig;
@@ -17,12 +22,6 @@ import org.example.service.EmailService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.util.HexFormat;
-import java.util.List;
-import java.util.Optional;
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -37,14 +36,17 @@ public class AiSummaryService {
 
   private InMemoryTtlCache<String, AiSummaryResult> cache() {
     if (cache == null) {
-      cache = new InMemoryTtlCache<>(aiConfig.getCache().getMaxEntries(), aiConfig.getCache().getTtlSeconds());
+      cache =
+          new InMemoryTtlCache<>(
+              aiConfig.getCache().getMaxEntries(), aiConfig.getCache().getTtlSeconds());
     }
     return cache;
   }
 
   public AiSummaryResult summarizeEmail(String username, String messageId, String content) {
     if (messageId == null || messageId.isBlank()) {
-      throw new AiException(HttpStatus.BAD_REQUEST, ErrorCode.ERR_AI_REQUEST_INVALID, "messageId is required");
+      throw new AiException(
+          HttpStatus.BAD_REQUEST, ErrorCode.ERR_AI_REQUEST_INVALID, "messageId is required");
     }
 
     String input = buildInput(username, messageId, content);
@@ -67,21 +69,23 @@ public class AiSummaryService {
     }
 
     // L2: Check database (persists across restarts)
-    Optional<EmailSummary> dbCached = emailSummaryRepository.findByMessageIdAndUserEmailAndContentHash(
-        messageId, username, contentHash);
+    Optional<EmailSummary> dbCached =
+        emailSummaryRepository.findByMessageIdAndUserEmailAndContentHash(
+            messageId, username, contentHash);
     if (dbCached.isPresent()) {
       log.debug("[DB HIT] messageId={}", messageId);
       EmailSummary existing = dbCached.get();
       // Decrypt summary from DB
       String decryptedSummary = encryptionService.decrypt(existing.getSummary());
-      AiSummaryResult result = AiSummaryResult.builder()
-          .summary(decryptedSummary)
-          .provider(existing.getProvider())
-          .model(existing.getModel())
-          .cached(true)
-          .source("database")
-          .latencyMs(0)
-          .build();
+      AiSummaryResult result =
+          AiSummaryResult.builder()
+              .summary(decryptedSummary)
+              .provider(existing.getProvider())
+              .model(existing.getModel())
+              .cached(true)
+              .source("database")
+              .latencyMs(0)
+              .build();
       // Populate L1 cache for faster subsequent access
       cache().put(cacheKey, result);
       return result;
@@ -98,14 +102,15 @@ public class AiSummaryService {
     try {
       // Encrypt summary before storing
       String encryptedSummary = encryptionService.encrypt(result.getSummary());
-      EmailSummary entity = EmailSummary.builder()
-          .messageId(messageId)
-          .userEmail(username)
-          .contentHash(contentHash)
-          .summary(encryptedSummary)
-          .provider(result.getProvider())
-          .model(result.getModel())
-          .build();
+      EmailSummary entity =
+          EmailSummary.builder()
+              .messageId(messageId)
+              .userEmail(username)
+              .contentHash(contentHash)
+              .summary(encryptedSummary)
+              .provider(result.getProvider())
+              .model(result.getModel())
+              .build();
       emailSummaryRepository.save(entity);
       log.debug("[DB SAVE] messageId={} (encrypted)", messageId);
     } catch (Exception e) {
@@ -186,7 +191,8 @@ public class AiSummaryService {
       byte[] hash = digest.digest(value.getBytes(StandardCharsets.UTF_8));
       return HexFormat.of().formatHex(hash);
     } catch (Exception ex) {
-      throw new AiException(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.ERR_SYSTEM, "Hashing failed", ex);
+      throw new AiException(
+          HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.ERR_SYSTEM, "Hashing failed", ex);
     }
   }
 }

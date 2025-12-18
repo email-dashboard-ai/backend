@@ -2,10 +2,10 @@ package org.example.service;
 
 import com.google.api.services.gmail.model.Label;
 import com.google.api.services.gmail.model.Message;
-import java.util.List;
-import org.springframework.web.multipart.MultipartFile;
 import java.time.Instant;
+import java.util.List;
 import org.example.dto.response.EmailPageResponse;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface EmailService {
   List<Label> getLabels(String email);
@@ -53,4 +53,8 @@ public interface EmailService {
   List<Message> getThreadMessages(String username, String threadId);
 
   void snoozeEmail(String username, String emailId, Instant snoozedUntil);
+
+  void unsnoozeEmail(String username, String emailId);
+
+  java.util.Map<String, Instant> getSnoozedEmailsInfo(String username);
 }

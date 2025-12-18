@@ -4,16 +4,16 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.example.exception.TokenRefreshException;
 import org.example.model.RefreshToken;
 import org.example.model.User;
 import org.example.repository.RefreshTokenRepository;
 import org.example.repository.UserRepository;
 import org.example.service.RefreshTokenService;
-import org.example.exception.TokenRefreshException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
-import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
@@ -56,7 +56,8 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     if (token.getExpiryDate().compareTo(Instant.now()) < 0) {
       refreshTokenRepository.delete(token);
       log.warn("Refresh token expired and deleted: {}", token.getToken());
-      throw new TokenRefreshException("Refresh token was expired. Please make a new signin request");
+      throw new TokenRefreshException(
+          "Refresh token was expired. Please make a new signin request");
     }
     return token;
   }

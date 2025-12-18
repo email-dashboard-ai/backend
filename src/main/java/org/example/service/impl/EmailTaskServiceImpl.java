@@ -24,10 +24,11 @@ public class EmailTaskServiceImpl implements EmailTaskService {
   @Override
   @Transactional
   public void updateStatus(String email, String emailId, KanbanStatus status) {
-    User user = userRepository.findByEmail(email)
-        .orElseThrow(() -> new RuntimeException("User not found"));
+    User user =
+        userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
 
-    Optional<EmailTask> existingTaskWrapper = emailTaskRepository.findByUserAndEmailId(user, emailId);
+    Optional<EmailTask> existingTaskWrapper =
+        emailTaskRepository.findByUserAndEmailId(user, emailId);
 
     if (status == KanbanStatus.INBOX) {
       // If moving back to Inbox, remove the tracking entry (default state)
@@ -45,10 +46,10 @@ public class EmailTaskServiceImpl implements EmailTaskService {
 
   @Override
   public Map<String, KanbanStatus> getTaskStatuses(String email) {
-    User user = userRepository.findByEmail(email)
-        .orElseThrow(() -> new RuntimeException("User not found"));
+    User user =
+        userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
     List<EmailTask> tasks = emailTaskRepository.findByUser(user);
-    
+
     Map<String, KanbanStatus> statusMap = new HashMap<>();
     for (EmailTask task : tasks) {
       statusMap.put(task.getEmailId(), task.getStatus());

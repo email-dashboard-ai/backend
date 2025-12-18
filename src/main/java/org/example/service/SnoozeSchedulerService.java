@@ -3,6 +3,8 @@ package org.example.service;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.example.enums.AuthProvider;
 import org.example.exception.GmailNetworkException;
 import org.example.exception.GmailServiceException;
@@ -14,74 +16,73 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class SnoozeSchedulerService {
-    private final SnoozedEmailRepository snoozedEmailRepository;
-    private final Map<AuthProvider, EmailProviderStrategy> strategies;
+  private final SnoozedEmailRepository snoozedEmailRepository;
+  private final Map<AuthProvider, EmailProviderStrategy> strategies;
 
-    @Scheduled(fixedRate = 30000)
-    @Transactional // Fix: Ensure Hibernate session is active for lazy loading
-    public void wakeUpSnoozeEmail() {
-        log.info("Running scheduled task to check for snoozed emails...");
-        List<SnoozedEmail> dueEmails = snoozedEmailRepository.findBySnoozedUntilBefore(Instant.now());
+  @Scheduled(fixedRate = 30000)
+  @Transactional // Fix: Ensure Hibernate session is active for lazy loading
+  public void wakeUpSnoozeEmail() {
+    log.info("Running scheduled task to check for snoozed emails...");
+    List<SnoozedEmail> dueEmails = snoozedEmailRepository.findBySnoozedUntilBefore(Instant.now());
 
-        if (dueEmails.isEmpty()) {
-            log.debug("No snoozed email to wake up");
-            return;
-        }
-
-        int successCount = 0;
-        int failureCount = 0;
-
-        for (SnoozedEmail snoozedEmail : dueEmails) {
-            try {
-                wakeUpEmail(snoozedEmail);
-                successCount++;
-
-            } catch (GmailServiceException e) {
-                log.error("Gmail error waking up email {}: {}", snoozedEmail.getEmailId(), e.getMessage());
-                failureCount++;
-
-            } catch (GmailNetworkException e) {
-                log.error("Network error waking up email {}: {}", snoozedEmail.getEmailId(), e.getMessage());
-                failureCount++;
-
-            } catch (Exception e) {
-                log.error("Unexpected error waking up email {}: {}", snoozedEmail.getEmailId(), e.getMessage());
-                failureCount++;
-
-            }
-        }
-
-        log.info("Woke up {} snoozed emails successfully, {} failed", successCount, failureCount);
+    if (dueEmails.isEmpty()) {
+      log.debug("No snoozed email to wake up");
+      return;
     }
 
-    private void wakeUpEmail(SnoozedEmail snoozedEmail) {
-        User user = snoozedEmail.getUser();
+    int successCount = 0;
+    int failureCount = 0;
 
-        EmailProviderStrategy strategy = getStrategy(user);
+    for (SnoozedEmail snoozedEmail : dueEmails) {
+      try {
+        wakeUpEmail(snoozedEmail);
+        successCount++;
 
-        String snoozedLabelId = strategy.getSnoozedLabelId(user);
+      } catch (GmailServiceException e) {
+        log.error("Gmail error waking up email {}: {}", snoozedEmail.getEmailId(), e.getMessage());
+        failureCount++;
 
-        strategy.modifyLabels(user, snoozedEmail.getEmailId(), List.of("INBOX"), List.of(snoozedLabelId));
+      } catch (GmailNetworkException e) {
+        log.error(
+            "Network error waking up email {}: {}", snoozedEmail.getEmailId(), e.getMessage());
+        failureCount++;
 
-        snoozedEmailRepository.delete(snoozedEmail);
-
-        log.info("Woke up email {} for user {}", snoozedEmail.getEmailId(), user.getEmail());
+      } catch (Exception e) {
+        log.error(
+            "Unexpected error waking up email {}: {}", snoozedEmail.getEmailId(), e.getMessage());
+        failureCount++;
+      }
     }
 
-    private EmailProviderStrategy getStrategy(User user) {
-        EmailProviderStrategy strategy = strategies.get(user.getProvider());
+    log.info("Woke up {} snoozed emails successfully, {} failed", successCount, failureCount);
+  }
 
-        if (strategy == null) {
-            throw new IllegalStateException("No strategy found for provider" + user.getProvider());
-        }
+  private void wakeUpEmail(SnoozedEmail snoozedEmail) {
+    User user = snoozedEmail.getUser();
 
-        return strategy;
+    EmailProviderStrategy strategy = getStrategy(user);
+
+    String snoozedLabelId = strategy.getSnoozedLabelId(user);
+
+    strategy.modifyLabels(
+        user, snoozedEmail.getEmailId(), List.of("INBOX"), List.of(snoozedLabelId));
+
+    snoozedEmailRepository.delete(snoozedEmail);
+
+    log.info("Woke up email {} for user {}", snoozedEmail.getEmailId(), user.getEmail());
+  }
+
+  private EmailProviderStrategy getStrategy(User user) {
+    EmailProviderStrategy strategy = strategies.get(user.getProvider());
+
+    if (strategy == null) {
+      throw new IllegalStateException("No strategy found for provider" + user.getProvider());
     }
+
+    return strategy;
+  }
 }

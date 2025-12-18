@@ -1,5 +1,9 @@
 package org.example.ai.provider;
 
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import org.example.ai.config.AiConfig;
 import org.example.ai.exception.AiException;
 import org.example.ai.model.AiProviderId;
@@ -7,11 +11,6 @@ import org.example.ai.model.AiSummaryResult;
 import org.example.enums.ErrorCode;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
 
 @Service
 public class AiProviderRouter {

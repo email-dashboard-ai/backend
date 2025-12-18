@@ -1,7 +1,9 @@
 package org.example.exception;
 
-import org.example.helper.ResponseWrapper;
+import lombok.extern.slf4j.Slf4j;
+import org.example.ai.exception.AiException;
 import org.example.enums.ErrorCode;
+import org.example.helper.ResponseWrapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -9,9 +11,6 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.example.ai.exception.AiException;
-
-import lombok.extern.slf4j.Slf4j;
 
 @RestControllerAdvice
 @Slf4j
@@ -103,9 +102,10 @@ public class GlobalExceptionHandler {
 
       default:
         errorCode = ErrorCode.ERR_GMAIL_SERVICE;
-        message = googleEx.getDetails() != null
-            ? googleEx.getDetails().getMessage()
-            : googleEx.getMessage();
+        message =
+            googleEx.getDetails() != null
+                ? googleEx.getDetails().getMessage()
+                : googleEx.getMessage();
         httpStatus = HttpStatus.valueOf(statusCode);
     }
 
@@ -115,7 +115,8 @@ public class GlobalExceptionHandler {
   }
 
   @ExceptionHandler(GmailNetworkException.class)
-  public ResponseEntity<ResponseWrapper<Void>> handleGmailNetworkException(GmailNetworkException ex) {
+  public ResponseEntity<ResponseWrapper<Void>> handleGmailNetworkException(
+      GmailNetworkException ex) {
     return buildResponse(
         HttpStatus.INTERNAL_SERVER_ERROR,
         ErrorCode.ERR_GMAIL_SERVICE,

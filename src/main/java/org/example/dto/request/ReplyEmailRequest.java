@@ -5,8 +5,8 @@ import lombok.Data;
 
 @Data
 public class ReplyEmailRequest {
-    private List<String> to;
-    private List<String> cc;
-    private List<String> bcc;
-    private String body;
+  private List<String> to;
+  private List<String> cc;
+  private List<String> bcc;
+  private String body;
 }

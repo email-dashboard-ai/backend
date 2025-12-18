@@ -1,5 +1,9 @@
 package org.example.config;
 
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.example.enums.AuthProvider;
 import org.example.repository.UserRepository;
@@ -16,11 +20,6 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
 @Configuration
 @EnableJpaAuditing
 @RequiredArgsConstructor
@@ -30,9 +29,10 @@ public class ApplicationConfig {
 
   @Bean
   public UserDetailsService userDetailsService() {
-    return username -> repository
-        .findByEmail(username)
-        .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+    return username ->
+        repository
+            .findByEmail(username)
+            .orElseThrow(() -> new UsernameNotFoundException("User not found"));
   }
 
   @Bean
@@ -58,8 +58,7 @@ public class ApplicationConfig {
   public Map<AuthProvider, EmailProviderStrategy> emailProviderStrategies(
       List<EmailProviderStrategy> strategies) {
     return strategies.stream()
-        .collect(Collectors.toMap(
-            EmailProviderStrategy::getSupportedProvider,
-            Function.identity()));
+        .collect(
+            Collectors.toMap(EmailProviderStrategy::getSupportedProvider, Function.identity()));
   }
 }

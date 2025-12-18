@@ -4,9 +4,9 @@ import com.google.api.services.gmail.model.Label;
 import com.google.api.services.gmail.model.Message;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.example.dto.response.EmailPageResponse;
 import org.example.enums.AuthProvider;
 import org.example.helper.MockDataHelper;
-import org.example.dto.response.EmailPageResponse;
 import org.example.model.User;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -130,7 +130,8 @@ public class MockEmailStrategy implements EmailProviderStrategy {
   }
 
   @Override
-  public void modifyLabels(User user, String emailId, List<String> addLabelIds, List<String> removeLabelIds) {
+  public void modifyLabels(
+      User user, String emailId, List<String> addLabelIds, List<String> removeLabelIds) {
     // No implementation yet
   }
 }
