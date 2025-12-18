@@ -3,11 +3,10 @@ package org.example.service.impl.strategy;
 import com.google.api.services.gmail.model.Label;
 import com.google.api.services.gmail.model.Message;
 import java.util.List;
+import org.example.dto.response.EmailPageResponse;
 import org.example.enums.AuthProvider;
 import org.example.model.User;
 import org.springframework.web.multipart.MultipartFile;
-
-import org.example.dto.response.EmailPageResponse;
 
 public interface EmailProviderStrategy {
   List<Label> getLabels(User user);
@@ -53,6 +52,11 @@ public interface EmailProviderStrategy {
       List<String> bcc,
       String body,
       List<MultipartFile> attachments);
+
+  String getSnoozedLabelId(User user);
+
+  void modifyLabels(
+      User user, String emailId, List<String> addLabelIds, List<String> removeLabelIds);
 
   AuthProvider getSupportedProvider();
 }

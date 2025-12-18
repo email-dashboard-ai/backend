@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.example.enums.ErrorCode;
+import org.example.util.RequestContext;
 
 @Data
 @Builder
@@ -14,6 +15,7 @@ public class ResponseWrapper<T> {
   private boolean success;
   private int errorCode;
   private String message;
+  private String requestId;
   private T data;
 
   public static <T> ResponseWrapper<T> success(T data, String message) {
@@ -21,6 +23,7 @@ public class ResponseWrapper<T> {
         .success(true)
         .errorCode(ErrorCode.SUCCESS.getCode())
         .message(message)
+        .requestId(RequestContext.getRequestId())
         .data(data)
         .build();
   }
@@ -30,6 +33,7 @@ public class ResponseWrapper<T> {
         .success(true)
         .errorCode(ErrorCode.SUCCESS.getCode())
         .message(message)
+        .requestId(RequestContext.getRequestId())
         .build();
   }
 
@@ -38,6 +42,7 @@ public class ResponseWrapper<T> {
         .success(false)
         .errorCode(errorCode.getCode())
         .message(message != null ? message : errorCode.getMessage())
+        .requestId(RequestContext.getRequestId())
         .build();
   }
 }

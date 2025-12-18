@@ -1,9 +1,16 @@
 package org.example.config;
 
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.example.enums.AuthProvider;
 import org.example.repository.UserRepository;
+import org.example.service.impl.strategy.EmailProviderStrategy;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -14,6 +21,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Configuration
+@EnableJpaAuditing
 @RequiredArgsConstructor
 public class ApplicationConfig {
 
@@ -44,5 +52,13 @@ public class ApplicationConfig {
   @Bean
   public PasswordEncoder passwordEncoder() {
     return new BCryptPasswordEncoder();
+  }
+
+  @Bean
+  public Map<AuthProvider, EmailProviderStrategy> emailProviderStrategies(
+      List<EmailProviderStrategy> strategies) {
+    return strategies.stream()
+        .collect(
+            Collectors.toMap(EmailProviderStrategy::getSupportedProvider, Function.identity()));
   }
 }

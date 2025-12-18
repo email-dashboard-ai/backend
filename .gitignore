@@ -59,6 +59,7 @@ logs/
 
 # Spring Boot
 spring-boot-devtools.properties
+application-local.yml
 
 # Compiled class files
 *.class

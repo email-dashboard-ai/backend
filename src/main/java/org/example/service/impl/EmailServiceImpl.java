@@ -2,34 +2,47 @@ package org.example.service.impl;
 
 import com.google.api.services.gmail.model.Label;
 import com.google.api.services.gmail.model.Message;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import org.example.enums.AuthProvider;
-import org.example.model.User;
+import lombok.extern.slf4j.Slf4j;
 import org.example.dto.response.EmailPageResponse;
+import org.example.enums.AuthProvider;
+import org.example.model.SnoozedEmail;
+import org.example.model.User;
+import org.example.repository.SnoozedEmailRepository;
 import org.example.repository.UserRepository;
 import org.example.service.EmailService;
 import org.example.service.impl.strategy.EmailProviderStrategy;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
+@Slf4j
 public class EmailServiceImpl implements EmailService {
   private final UserRepository userRepository;
   private final Map<AuthProvider, EmailProviderStrategy> strategies;
+  private final SnoozedEmailRepository snoozedEmailRepository;
 
   // Constructor Injection automatically finds all implementations of
   // EmailProviderStrategy
-  public EmailServiceImpl(UserRepository userRepository, List<EmailProviderStrategy> strategyList) {
+  public EmailServiceImpl(
+      UserRepository userRepository,
+      List<EmailProviderStrategy> strategyList,
+      SnoozedEmailRepository snoozedEmailRepository) {
     this.userRepository = userRepository;
+    this.snoozedEmailRepository = snoozedEmailRepository;
+
     // Convert list of strategies to a Map for O(1) lookup: { LOCAL -> MockStrategy,
     // GOOGLE ->
     // GoogleStrategy }
-    this.strategies = strategyList.stream()
-        .collect(
-            Collectors.toMap(EmailProviderStrategy::getSupportedProvider, Function.identity()));
+    this.strategies =
+        strategyList.stream()
+            .collect(
+                Collectors.toMap(EmailProviderStrategy::getSupportedProvider, Function.identity()));
   }
 
   private EmailProviderStrategy getStrategy(User user) {
@@ -130,5 +143,60 @@ public class EmailServiceImpl implements EmailService {
   public List<Message> getThreadMessages(String email, String threadId) {
     User user = userRepository.findByEmail(email).orElseThrow();
     return getStrategy(user).getThreadMessages(user, threadId);
+  }
+
+  @Override
+  public void snoozeEmail(String username, String emailId, Instant snoozedUntil) {
+
+    User user =
+        userRepository
+            .findByEmail(username)
+            .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+    EmailProviderStrategy strategy = getStrategy(user);
+
+    String snoozedLabelId = strategy.getSnoozedLabelId(user);
+
+    strategy.modifyLabels(user, emailId, List.of(snoozedLabelId), List.of("INBOX"));
+
+    SnoozedEmail snoozedEmail = new SnoozedEmail();
+    snoozedEmail.setEmailId(emailId);
+    snoozedEmail.setUser(user);
+    snoozedEmail.setSnoozedUntil(snoozedUntil);
+
+    snoozedEmailRepository.save(snoozedEmail);
+
+    log.info("Snoozed email {} successfully unitl {}", emailId, snoozedUntil);
+  }
+
+  @Override
+  public void unsnoozeEmail(String username, String emailId) {
+    User user =
+        userRepository
+            .findByEmail(username)
+            .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+    SnoozedEmail snoozedEmail =
+        snoozedEmailRepository
+            .findByEmailIdAndUserEmail(emailId, username)
+            .orElseThrow(() -> new IllegalStateException("Email is not snoozed"));
+
+    EmailProviderStrategy strategy = getStrategy(user);
+    String snoozedLabelId = strategy.getSnoozedLabelId(user);
+
+    // Move email back to INBOX
+    strategy.modifyLabels(user, emailId, List.of("INBOX"), List.of(snoozedLabelId));
+
+    // Delete snooze record
+    snoozedEmailRepository.delete(snoozedEmail);
+
+    log.info("Unsnoozed email {} for user {}", emailId, username);
+  }
+
+  @Override
+  public Map<String, Instant> getSnoozedEmailsInfo(String username) {
+    List<SnoozedEmail> snoozedEmails = snoozedEmailRepository.findByUserEmail(username);
+    return snoozedEmails.stream()
+        .collect(Collectors.toMap(SnoozedEmail::getEmailId, SnoozedEmail::getSnoozedUntil));
   }
 }

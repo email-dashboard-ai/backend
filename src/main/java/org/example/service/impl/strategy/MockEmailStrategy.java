@@ -4,9 +4,9 @@ import com.google.api.services.gmail.model.Label;
 import com.google.api.services.gmail.model.Message;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.example.dto.response.EmailPageResponse;
 import org.example.enums.AuthProvider;
 import org.example.helper.MockDataHelper;
-import org.example.dto.response.EmailPageResponse;
 import org.example.model.User;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -122,5 +122,16 @@ public class MockEmailStrategy implements EmailProviderStrategy {
   public List<Message> getThreadMessages(User user, String threadId) {
     // Mock implementation: return a list containing a single mock message
     return List.of(getEmailDetails(user, threadId)); // Assuming threadId matches messageId for mock
+  }
+
+  @Override
+  public String getSnoozedLabelId(User user) {
+    return "SNOOZED";
+  }
+
+  @Override
+  public void modifyLabels(
+      User user, String emailId, List<String> addLabelIds, List<String> removeLabelIds) {
+    // No implementation yet
   }
 }

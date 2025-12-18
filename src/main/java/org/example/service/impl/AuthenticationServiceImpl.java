@@ -2,11 +2,13 @@ package org.example.service.impl;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeTokenRequest;
 import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
+import com.google.api.client.http.HttpRequest;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import jakarta.transaction.Transactional;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.example.config.AppConfig;
 import org.example.dto.request.AuthRequest;
 import org.example.dto.request.GoogleAuthRequest;
@@ -29,8 +31,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
-import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
@@ -96,22 +96,27 @@ public class AuthenticationServiceImpl implements AuthenticationService {
   @Override
   public AuthResponse authenticateGoogle(GoogleAuthRequest request) throws IOException {
     log.info("Authenticating with Google");
-    GoogleTokenResponse tokenResponse =
+    GoogleAuthorizationCodeTokenRequest tokenRequest =
         new GoogleAuthorizationCodeTokenRequest(
-                new NetHttpTransport(),
-                new GsonFactory(),
-                appConfig.getGoogle().getTokenUri(),
-                googleClientId,
-                googleClientSecret,
-                request.getAuthCode(),
-                appConfig.getGoogle().getRedirectUri())
-            .execute();
+            new NetHttpTransport(),
+            new GsonFactory(),
+            appConfig.getGoogle().getTokenUri(),
+            googleClientId,
+            googleClientSecret,
+            request.getAuthCode(),
+            appConfig.getGoogle().getRedirectUri());
+
+    tokenRequest.setRequestInitializer(
+        (HttpRequest httpRequest) -> {
+          httpRequest.setConnectTimeout(appConfig.getGoogle().getConnectTimeoutMs());
+          httpRequest.setReadTimeout(appConfig.getGoogle().getReadTimeoutMs());
+        });
+
+    GoogleTokenResponse tokenResponse = tokenRequest.execute();
 
     String email = tokenResponse.parseIdToken().getPayload().getEmail();
     String name = (String) tokenResponse.parseIdToken().getPayload().get("name");
     String picture = (String) tokenResponse.parseIdToken().getPayload().get("picture");
-
-
 
     User user =
         repository
@@ -126,8 +131,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                   return newUser;
                 });
 
-
-
     user.setGoogleAccessToken(tokenResponse.getAccessToken());
     if (tokenResponse.getRefreshToken() != null) {
       user.setGoogleRefreshToken(tokenResponse.getRefreshToken());
@@ -136,8 +139,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
       user.setAvatar(picture);
     }
     repository.save(user);
-
-
 
     var jwtToken = jwtService.generateToken(user);
     var refreshToken = refreshTokenService.createRefreshToken(user.getEmail());
@@ -173,8 +174,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         repository
             .findByEmail(userEmail)
             .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-
-
 
     refreshTokenRepository.deleteByUser(user);
     log.info("User logged out: {}", userEmail);
