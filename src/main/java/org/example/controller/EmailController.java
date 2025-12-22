@@ -62,6 +62,17 @@ public class EmailController {
   }
 
   @Operation(
+      summary = "Get snoozed emails info",
+      description = "Returns a map of email IDs to their snooze until times")
+  @GetMapping("/snoozed-info")
+  public ResponseWrapper<java.util.Map<String, java.time.Instant>> getSnoozedEmailsInfo(
+      @AuthenticationPrincipal UserDetails userDetails) {
+    return ResponseWrapper.success(
+        emailService.getSnoozedEmailsInfo(userDetails.getUsername()),
+        "Snoozed emails info fetched successfully");
+  }
+
+  @Operation(
       summary = "Get Email Detail",
       description = "Returns the full content of a specific email by ID.")
   @GetMapping("/{id}")
@@ -243,16 +254,6 @@ public class EmailController {
     return ResponseWrapper.success("Email unsnoozed successfully");
   }
 
-  @Operation(
-      summary = "Get snoozed emails info",
-      description = "Returns a map of email IDs to their snooze until times")
-  @GetMapping("/snoozed-info")
-  public ResponseWrapper<java.util.Map<String, java.time.Instant>> getSnoozedEmailsInfo(
-      @AuthenticationPrincipal UserDetails userDetails) {
-    return ResponseWrapper.success(
-        emailService.getSnoozedEmailsInfo(userDetails.getUsername()),
-        "Snoozed emails info fetched successfully");
-  }
 
   @Operation(
       summary = "Fuzzy Search Emails",
