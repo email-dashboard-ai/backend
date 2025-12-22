@@ -253,4 +253,15 @@ public class EmailController {
         emailService.getSnoozedEmailsInfo(userDetails.getUsername()),
         "Snoozed emails info fetched successfully");
   }
+
+  @Operation(
+      summary = "Fuzzy Search Emails",
+      description = "Search emails by subject, sender, or content with typo tolerance.")
+  @GetMapping("/search")
+  public ResponseWrapper<List<org.example.model.SyncedEmail>> searchEmails(
+      @AuthenticationPrincipal UserDetails userDetails, @RequestParam String q) {
+    return ResponseWrapper.success(
+        emailService.searchEmails(userDetails.getUsername(), q),
+        "Search results fetched successfully");
+  }
 }

@@ -26,15 +26,21 @@ public class EmailServiceImpl implements EmailService {
   private final UserRepository userRepository;
   private final Map<AuthProvider, EmailProviderStrategy> strategies;
   private final SnoozedEmailRepository snoozedEmailRepository;
+  private final org.example.repository.SyncedEmailRepository syncedEmailRepository;
+  private final org.example.config.AppConfig appConfig;
 
   // Constructor Injection automatically finds all implementations of
   // EmailProviderStrategy
   public EmailServiceImpl(
       UserRepository userRepository,
       List<EmailProviderStrategy> strategyList,
-      SnoozedEmailRepository snoozedEmailRepository) {
+      SnoozedEmailRepository snoozedEmailRepository,
+      org.example.repository.SyncedEmailRepository syncedEmailRepository,
+      org.example.config.AppConfig appConfig) {
     this.userRepository = userRepository;
     this.snoozedEmailRepository = snoozedEmailRepository;
+    this.syncedEmailRepository = syncedEmailRepository;
+    this.appConfig = appConfig;
 
     // Convert list of strategies to a Map for O(1) lookup: { LOCAL -> MockStrategy,
     // GOOGLE ->
@@ -56,12 +62,16 @@ public class EmailServiceImpl implements EmailService {
 
   public EmailPageResponse getEmails(String email, String labelId, String pageToken, int limit) {
     User user = userRepository.findByEmail(email).orElseThrow();
-    return getStrategy(user).getEmails(user, labelId, pageToken, limit);
+    EmailPageResponse response = getStrategy(user).getEmails(user, labelId, pageToken, limit);
+    syncEmails(response.getMessages(), email);
+    return response;
   }
 
   public Message getEmailDetails(String email, String messageId) {
     User user = userRepository.findByEmail(email).orElseThrow();
-    return getStrategy(user).getEmailDetails(user, messageId);
+    Message message = getStrategy(user).getEmailDetails(user, messageId);
+    syncEmail(message, email);
+    return message;
   }
 
   public void markAsRead(String email, String messageId) {
@@ -198,5 +208,115 @@ public class EmailServiceImpl implements EmailService {
     List<SnoozedEmail> snoozedEmails = snoozedEmailRepository.findByUserEmail(username);
     return snoozedEmails.stream()
         .collect(Collectors.toMap(SnoozedEmail::getEmailId, SnoozedEmail::getSnoozedUntil));
+  }
+
+  @Override
+  public List<org.example.model.SyncedEmail> searchEmails(String email, String query) {
+    return syncedEmailRepository.searchEmails(email, query);
+  }
+
+  private void syncEmails(List<Message> messages, String userEmail) {
+    if (messages == null || messages.isEmpty()) return;
+    java.util.concurrent.CompletableFuture.runAsync(
+        () -> {
+          try {
+            List<org.example.model.SyncedEmail> syncedEmails =
+                messages.stream()
+                    .map(msg -> toSyncedEmail(msg, userEmail))
+                    .filter(this::isWithinRetentionPeriod)
+                    .collect(Collectors.toList());
+            if (!syncedEmails.isEmpty()) {
+              syncedEmailRepository.saveAll(syncedEmails);
+            }
+          } catch (Exception e) {
+            log.error("Failed to sync emails for user {}", userEmail, e);
+          }
+        });
+  }
+
+  private void syncEmail(Message message, String userEmail) {
+    if (message == null) return;
+    java.util.concurrent.CompletableFuture.runAsync(
+        () -> {
+          try {
+            org.example.model.SyncedEmail syncedEmail = toSyncedEmail(message, userEmail);
+            if (isWithinRetentionPeriod(syncedEmail)) {
+              syncedEmailRepository.save(syncedEmail);
+            }
+          } catch (Exception e) {
+            log.error("Failed to sync email {} for user {}", message.getId(), userEmail, e);
+          }
+        });
+  }
+
+  private boolean isWithinRetentionPeriod(org.example.model.SyncedEmail email) {
+    return email.getReceivedDate() != null
+        && email
+            .getReceivedDate()
+            .isAfter(
+                java.time.LocalDateTime.now().minusDays(appConfig.getSync().getRetentionDays()));
+  }
+
+  private org.example.model.SyncedEmail toSyncedEmail(Message msg, String userEmail) {
+    String subject = getHeader(msg, "Subject");
+    String from = getHeader(msg, "From");
+    String body = getBody(msg);
+    // Fallback if body is empty, use snippet
+    if (body == null || body.isBlank()) {
+      body = msg.getSnippet();
+    }
+
+    return org.example.model.SyncedEmail.builder()
+        .messageId(msg.getId())
+        .userEmail(userEmail)
+        .subject(subject)
+        .from(from)
+        .snippet(msg.getSnippet())
+        .body(body)
+        .receivedDate(
+            java.time.LocalDateTime.ofInstant(
+                Instant.ofEpochMilli(msg.getInternalDate()), java.time.ZoneId.systemDefault()))
+        .build();
+  }
+
+  private String getHeader(Message msg, String name) {
+    if (msg.getPayload() == null || msg.getPayload().getHeaders() == null) return "";
+    return msg.getPayload().getHeaders().stream()
+        .filter(h -> h.getName().equalsIgnoreCase(name))
+        .findFirst()
+        .map(com.google.api.services.gmail.model.MessagePartHeader::getValue)
+        .orElse("");
+  }
+
+  private String getBody(Message msg) {
+    if (msg.getPayload() == null) return "";
+    String bodyPart = getBodyPart(msg.getPayload());
+    if (bodyPart != null) {
+      // Decode URL safe base64
+      byte[] decoded = java.util.Base64.getUrlDecoder().decode(bodyPart);
+      String html = new String(decoded, java.nio.charset.StandardCharsets.UTF_8);
+      return org.jsoup.Jsoup.parse(html).text();
+    }
+    return msg.getSnippet();
+  }
+
+  private String getBodyPart(com.google.api.services.gmail.model.MessagePart part) {
+    if (part.getMimeType().equalsIgnoreCase("text/plain")
+        && part.getBody() != null
+        && part.getBody().getData() != null) {
+      return part.getBody().getData();
+    }
+    if (part.getMimeType().equalsIgnoreCase("text/html")
+        && part.getBody() != null
+        && part.getBody().getData() != null) {
+      return part.getBody().getData();
+    }
+    if (part.getParts() != null) {
+      for (com.google.api.services.gmail.model.MessagePart subPart : part.getParts()) {
+        String result = getBodyPart(subPart);
+        if (result != null) return result;
+      }
+    }
+    return null;
   }
 }

@@ -61,8 +61,13 @@ app:
   google:
     token-uri: ${GOOGLE_TOKEN_URI:https://oauth2.googleapis.com/token}
     redirect-uri: ${GOOGLE_REDIRECT_URI:postmessage}
+    connect-timeout-ms: ${GOOGLE_CONNECT_TIMEOUT_MS:10000}
+    read-timeout-ms: ${GOOGLE_READ_TIMEOUT_MS:20000}
   gmail:
-    default-limit: 50
+    default-limit: ${GMAIL_DEFAULT_LIMIT:20}
+    max-limit: ${GMAIL_MAX_LIMIT:50}
+  sync:
+    retention-days: ${SYNC_RETENTION_DAYS:45}
 
 # AI Summarization
 ai:
