@@ -46,6 +46,7 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
 
   private final UserRepository userRepository;
   private final Map<String, String> snoozedLabelCache = new ConcurrentHashMap<>();
+  private static final String SNOOZED_LABEL_NAME = "SNOOZED";
 
   @Value("${google.client.id}")
   private String googleClientId;
@@ -553,11 +554,11 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
     }
   }
 
-  private String createLabel(Gmail gmail, String labelName) {
+  private String createSnoozedLabel(Gmail gmail) {
     try {
       Label label =
           new Label()
-              .setName(labelName)
+              .setName(SNOOZED_LABEL_NAME)
               .setLabelListVisibility("labelShow")
               .setMessageListVisibility("show")
               .setType("user");
@@ -569,8 +570,8 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
 
     } catch (GoogleJsonResponseException e) {
       if (e.getStatusCode() == 409) {
-        log.warn("Label '{}' already exists, fetching existing label", labelName);
-        return findExistingLabelId(gmail, labelName);
+        log.warn("Label '{}' already exists, fetching existing label", SNOOZED_LABEL_NAME);
+        return findExistingSnoozedLabelId(gmail);
       }
       throw new GmailServiceException(e);
     } catch (IOException e) {
@@ -578,19 +579,19 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
     }
   }
 
-  private String findExistingLabelId(Gmail gmail, String labelName) {
+  private String findExistingSnoozedLabelId(Gmail gmail) {
     try {
       List<Label> labels = gmail.users().labels().list("me").execute().getLabels();
 
       for (Label label : labels) {
-        if (label.getName().equals(labelName)) {
+        if (label.getName().equals(SNOOZED_LABEL_NAME)) {
           return label.getId();
         }
       }
 
-      log.error("Label '{}' should exist but not found", labelName);
+      log.error("Label '{}' should exist but not found", SNOOZED_LABEL_NAME);
 
-      throw new RuntimeException("Label " + labelName + " should exist but not found");
+      throw new RuntimeException("Label " + SNOOZED_LABEL_NAME + " should exist but not found");
     } catch (GoogleJsonResponseException e) {
       throw new GmailServiceException(e);
     } catch (IOException e) {
@@ -624,7 +625,7 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
 
       log.info("SNOOZED label not found, create new one");
 
-      String snoozedLabelId = createLabel(gmail, "SNOOZED");
+      String snoozedLabelId = createSnoozedLabel(gmail);
       snoozedLabelCache.put(cacheKey, snoozedLabelId);
 
       return snoozedLabelId;
