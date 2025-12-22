@@ -28,19 +28,20 @@ public class EmailServiceImpl implements EmailService {
   private final SnoozedEmailRepository snoozedEmailRepository;
   private final org.example.repository.SyncedEmailRepository syncedEmailRepository;
   private final org.example.config.AppConfig appConfig;
+  private final SearchOrchestrator searchOrchestrator;
 
-  // Constructor Injection automatically finds all implementations of
-  // EmailProviderStrategy
   public EmailServiceImpl(
       UserRepository userRepository,
       List<EmailProviderStrategy> strategyList,
       SnoozedEmailRepository snoozedEmailRepository,
       org.example.repository.SyncedEmailRepository syncedEmailRepository,
-      org.example.config.AppConfig appConfig) {
+      org.example.config.AppConfig appConfig,
+      SearchOrchestrator searchOrchestrator) {
     this.userRepository = userRepository;
     this.snoozedEmailRepository = snoozedEmailRepository;
     this.syncedEmailRepository = syncedEmailRepository;
     this.appConfig = appConfig;
+    this.searchOrchestrator = searchOrchestrator;
 
     // Convert list of strategies to a Map for O(1) lookup: { LOCAL -> MockStrategy,
     // GOOGLE ->
@@ -211,8 +212,59 @@ public class EmailServiceImpl implements EmailService {
   }
 
   @Override
-  public List<org.example.model.SyncedEmail> searchEmails(String email, String query) {
-    return syncedEmailRepository.searchEmails(email, query);
+  public List<org.example.dto.response.SearchResultDTO> search(
+      String email, org.example.dto.request.SearchRequest request) {
+    User user = userRepository.findByEmail(email).orElseThrow();
+    SearchOrchestrator.SearchResult result = searchOrchestrator.resolve(request);
+
+    log.info("Search: request={}, strategy={}", request, result.getStrategy());
+
+    return switch (result.getStrategy()) {
+      case GMAIL_API -> searchByGmailApi(user, result.getGmailQuery());
+      case INTERNAL -> searchInternal(email, result.getFuzzyQuery());
+      case HYBRID -> searchHybrid(user, email, result.getGmailQuery(), result.getFuzzyQuery());
+    };
+  }
+
+  private List<org.example.dto.response.SearchResultDTO> searchByGmailApi(
+      User user, String gmailQuery) {
+    var messages = getStrategy(user).searchByGmailQuery(user, gmailQuery);
+    return messages.stream()
+        .map(msg -> org.example.dto.response.SearchResultDTO.fromGmailMessage(msg, "GMAIL_API"))
+        .collect(Collectors.toList());
+  }
+
+  private List<org.example.dto.response.SearchResultDTO> searchInternal(
+      String email, String fuzzyQuery) {
+    var results = syncedEmailRepository.searchEmails(email, fuzzyQuery);
+    return results.stream()
+        .map(e -> org.example.dto.response.SearchResultDTO.fromSyncedEmail(e, "INTERNAL"))
+        .collect(Collectors.toList());
+  }
+
+  private List<org.example.dto.response.SearchResultDTO> searchHybrid(
+      User user, String email, String gmailQuery, String fuzzyQuery) {
+    // Step 1: Use Gmail API to get initial results
+    var gmailMessages = getStrategy(user).searchByGmailQuery(user, gmailQuery);
+
+    if (gmailMessages.isEmpty()) {
+      return List.of();
+    }
+
+    // Extract message IDs from Gmail results
+    var gmailMessageIds =
+        gmailMessages.stream()
+            .map(com.google.api.services.gmail.model.Message::getId)
+            .collect(Collectors.toSet());
+
+    // Step 2: Search internal DB for fuzzy match
+    var internalResults = syncedEmailRepository.searchEmails(email, fuzzyQuery);
+
+    // Step 3: Filter internal results to only include emails from Gmail results
+    return internalResults.stream()
+        .filter(e -> gmailMessageIds.contains(e.getMessageId()))
+        .map(e -> org.example.dto.response.SearchResultDTO.fromSyncedEmail(e, "HYBRID"))
+        .collect(Collectors.toList());
   }
 
   private void syncEmails(List<Message> messages, String userEmail) {

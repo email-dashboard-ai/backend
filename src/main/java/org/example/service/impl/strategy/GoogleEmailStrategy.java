@@ -671,4 +671,51 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
           return null;
         });
   }
+
+  @Override
+  public List<Message> searchByGmailQuery(User user, String query) {
+    return executeWithRetry(user, () -> executeSearchByGmailQuery(user, query));
+  }
+
+  private List<Message> executeSearchByGmailQuery(User user, String query) throws IOException {
+    Gmail service = getGmailClient(user);
+
+    var listRequest =
+        service
+            .users()
+            .messages()
+            .list("me")
+            .setQ(query)
+            .setMaxResults(50L); // Limit results
+
+    var response = listRequest.execute();
+
+    List<Message> messages = response.getMessages();
+    if (messages == null || messages.isEmpty()) {
+      return new ArrayList<>();
+    }
+
+    // Fetch metadata for each message in parallel
+    List<java.util.concurrent.CompletableFuture<Message>> futures =
+        messages.stream()
+            .map(
+                msg ->
+                    java.util.concurrent.CompletableFuture.supplyAsync(
+                        () -> {
+                          try {
+                            return service
+                                .users()
+                                .messages()
+                                .get("me", msg.getId())
+                                .setFormat("metadata")
+                                .setMetadataHeaders(List.of("Subject", "From", "To", "Date"))
+                                .execute();
+                          } catch (IOException e) {
+                            throw new RuntimeException(e);
+                          }
+                        }))
+            .toList();
+
+    return futures.stream().map(java.util.concurrent.CompletableFuture::join).toList();
+  }
 }

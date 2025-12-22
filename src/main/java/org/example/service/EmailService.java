@@ -58,5 +58,6 @@ public interface EmailService {
 
   java.util.Map<String, Instant> getSnoozedEmailsInfo(String username);
 
-  java.util.List<org.example.model.SyncedEmail> searchEmails(String email, String query);
+  java.util.List<org.example.dto.response.SearchResultDTO> search(
+      String email, org.example.dto.request.SearchRequest request);
 }

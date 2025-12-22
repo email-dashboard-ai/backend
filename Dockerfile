@@ -1,33 +1,38 @@
 # STAGE 1: Build the Application
-FROM eclipse-temurin:21-jdk AS build
+# Use Maven 3.9.6 with JDK 21 as the base image for the build environment
+FROM maven:3.9.6-eclipse-temurin-21 AS build
 WORKDIR /app
 
-# Install Maven
-RUN apt-get update && apt-get install -y maven && rm -rf /var/lib/apt/lists/*
-
-# Copy pom.xml and download dependencies (Cached if pom.xml doesn't change)
+# Optimize dependency management by copying pom.xml first
+# This leverages Docker's layer caching: dependencies are only re-downloaded if pom.xml changes
 COPY pom.xml .
-RUN mvn dependency:go-offline
 
-# Copy the entire project and build the application
-COPY . .
-RUN mvn clean package -DskipTests
+# Download project dependencies
+# The --mount=type=cache instruction preserves the local Maven repository across builds
+RUN --mount=type=cache,target=/root/.m2 mvn dependency:go-offline
+
+# Copy the source code into the container
+COPY src ./src
+
+# Compile and package the application into a JAR file, skipping unit tests for speed
+RUN --mount=type=cache,target=/root/.m2 mvn package -DskipTests
 
 # STAGE 2: Run the Application
+# Use a lightweight JRE 21 Alpine image to minimize the final image size and attack surface
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-# SECURITY: Create a non-root group and user
+# SECURITY: Create a dedicated system group and user to run the application
+# Avoid running the container as 'root' for better security (Principle of Least Privilege)
 RUN addgroup -S spring && adduser -S spring -G spring
 
-# Copy the JAR from the build stage
+# Copy the generated JAR file from the 'build' stage
+# Using a wildcard ensures we pick up the JAR regardless of the versioning in pom.xml
 COPY --from=build /app/target/*.jar app.jar
 
-# SECURITY: Switch to non-root user
+# Switch to the non-root user before execution
 USER spring:spring
 
-# Expose the port
 EXPOSE 3000
 
-# Run the app
 ENTRYPOINT ["java", "-jar", "app.jar"]

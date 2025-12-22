@@ -255,13 +255,17 @@ public class EmailController {
   }
 
   @Operation(
-      summary = "Fuzzy Search Emails",
-      description = "Search emails by subject, sender, or content with typo tolerance.")
-  @GetMapping("/search")
-  public ResponseWrapper<List<org.example.model.SyncedEmail>> searchEmails(
-      @AuthenticationPrincipal UserDetails userDetails, @RequestParam String q) {
+      summary = "Search Emails",
+      description =
+          "Automatically chooses search strategy based on request fields: "
+              + "Gmail API for structured fields (from, to, subject, after, before), "
+              + "internal fuzzy for body content, or hybrid for both.")
+  @PostMapping("/search")
+  public ResponseWrapper<List<org.example.dto.response.SearchResultDTO>> search(
+      @AuthenticationPrincipal UserDetails userDetails,
+      @RequestBody org.example.dto.request.SearchRequest request) {
     return ResponseWrapper.success(
-        emailService.searchEmails(userDetails.getUsername(), q),
+        emailService.search(userDetails.getUsername(), request),
         "Search results fetched successfully");
   }
 }
