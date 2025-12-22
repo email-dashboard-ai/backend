@@ -209,6 +209,7 @@ public class EmailServiceImpl implements EmailService {
     return snoozedEmails.stream()
         .collect(Collectors.toMap(SnoozedEmail::getEmailId, SnoozedEmail::getSnoozedUntil));
   }
+
   @Override
   public List<org.example.model.SyncedEmail> searchEmails(String email, String query) {
     return syncedEmailRepository.searchEmails(email, query);

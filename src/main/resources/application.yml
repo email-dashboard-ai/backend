@@ -64,7 +64,6 @@ app:
     connect-timeout-ms: ${GOOGLE_CONNECT_TIMEOUT_MS:10000}
     read-timeout-ms: ${GOOGLE_READ_TIMEOUT_MS:20000}
   gmail:
-  gmail:
     default-limit: ${GMAIL_DEFAULT_LIMIT:20}
     max-limit: ${GMAIL_MAX_LIMIT:50}
   sync:

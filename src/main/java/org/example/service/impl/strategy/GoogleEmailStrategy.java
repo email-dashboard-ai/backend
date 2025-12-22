@@ -1,16 +1,18 @@
 package org.example.service.impl.strategy;
 
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.googleapis.auth.oauth2.GoogleRefreshTokenRequest;
 import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
+import com.google.api.client.http.HttpRequestInitializer;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.Label;
 import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.ModifyMessageRequest;
+import com.google.auth.http.HttpCredentialsAdapter;
+import com.google.auth.oauth2.AccessToken;
 import jakarta.activation.DataHandler;
 import jakarta.activation.DataSource;
 import jakarta.mail.MessagingException;
@@ -230,15 +232,13 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
       throws IOException {
     Gmail service = getGmailClient(user);
 
-    long maxResults = limit;
-
     var listRequest =
         service
             .users()
             .messages()
             .list("me")
             .setLabelIds(List.of(labelId))
-            .setMaxResults(maxResults);
+            .setMaxResults((long) limit);
 
     if (pageToken != null && !pageToken.isEmpty()) {
       listRequest.setPageToken(pageToken);
@@ -414,13 +414,15 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
 
   private Gmail getGmailClient(User user) {
     try {
-      GoogleCredential credential =
-          new GoogleCredential().setAccessToken(user.getGoogleAccessToken());
+      AccessToken accessToken = new AccessToken(user.getGoogleAccessToken(), null);
+      com.google.auth.oauth2.GoogleCredentials credentials =
+          com.google.auth.oauth2.GoogleCredentials.create(accessToken);
+      HttpRequestInitializer requestInitializer = new HttpCredentialsAdapter(credentials);
 
       return new Gmail.Builder(
               GoogleNetHttpTransport.newTrustedTransport(),
               GsonFactory.getDefaultInstance(),
-              credential)
+              requestInitializer)
           .setApplicationName(applicationName)
           .build();
 

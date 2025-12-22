@@ -7,6 +7,9 @@ import lombok.Data;
 @Schema(description = "Request object for Google authentication")
 public class GoogleAuthRequest {
 
-  @Schema(description = "Google authorization code", example = "4/0AX4XfW...", required = true)
+  @Schema(
+      description = "Google authorization code",
+      example = "4/0AX4XfW...",
+      requiredMode = Schema.RequiredMode.REQUIRED)
   private String authCode;
 }

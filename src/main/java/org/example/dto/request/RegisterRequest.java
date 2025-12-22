@@ -7,12 +7,21 @@ import lombok.Data;
 @Schema(description = "Request object for user registration")
 public class RegisterRequest {
 
-  @Schema(description = "User's full name", example = "John Doe", required = true)
+  @Schema(
+      description = "User's full name",
+      example = "John Doe",
+      requiredMode = Schema.RequiredMode.REQUIRED)
   private String name;
 
-  @Schema(description = "User's email address", example = "john.doe@example.com", required = true)
+  @Schema(
+      description = "User's email address",
+      example = "john.doe@example.com",
+      requiredMode = Schema.RequiredMode.REQUIRED)
   private String email;
 
-  @Schema(description = "User's password", example = "securePassword123", required = true)
+  @Schema(
+      description = "User's password",
+      example = "securePassword123",
+      requiredMode = Schema.RequiredMode.REQUIRED)
   private String password;
 }

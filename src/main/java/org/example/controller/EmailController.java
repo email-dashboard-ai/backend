@@ -254,7 +254,6 @@ public class EmailController {
     return ResponseWrapper.success("Email unsnoozed successfully");
   }
 
-
   @Operation(
       summary = "Fuzzy Search Emails",
       description = "Search emails by subject, sender, or content with typo tolerance.")
