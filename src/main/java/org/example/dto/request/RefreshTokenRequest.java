@@ -7,6 +7,9 @@ import lombok.Data;
 @Schema(description = "Request object for refreshing access tokens")
 public class RefreshTokenRequest {
 
-  @Schema(description = "Refresh token", example = "dXNlci1yZWZyZXNoLXRva2Vu...", required = true)
+  @Schema(
+      description = "Refresh token",
+      example = "dXNlci1yZWZyZXNoLXRva2Vu...",
+      requiredMode = Schema.RequiredMode.REQUIRED)
   private String token;
 }

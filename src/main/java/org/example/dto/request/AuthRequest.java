@@ -7,9 +7,15 @@ import lombok.Data;
 @Schema(description = "Request object for user authentication")
 public class AuthRequest {
 
-  @Schema(description = "User's email address", example = "user@example.com", required = true)
+  @Schema(
+      description = "User's email address",
+      example = "user@example.com",
+      requiredMode = Schema.RequiredMode.REQUIRED)
   private String email;
 
-  @Schema(description = "User's password", example = "password123", required = true)
+  @Schema(
+      description = "User's password",
+      example = "password123",
+      requiredMode = Schema.RequiredMode.REQUIRED)
   private String password;
 }

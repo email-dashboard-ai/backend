@@ -14,13 +14,13 @@ spring:
     username: ${DB_USER:admin}
     password: ${DB_PASSWORD:secure_db_password}
   jpa:
+    open-in-view: false
     hibernate:
-      # TEMPORARY: Using create-drop to fix database schema
-      # Change back to 'update' after first successful startup
       ddl-auto: update
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+        transaction:
+          jta.platform: none
   servlet:
     multipart:
       max-file-size: 25MB # Maximum size for a single file
@@ -61,8 +61,13 @@ app:
   google:
     token-uri: ${GOOGLE_TOKEN_URI:https://oauth2.googleapis.com/token}
     redirect-uri: ${GOOGLE_REDIRECT_URI:postmessage}
+    connect-timeout-ms: ${GOOGLE_CONNECT_TIMEOUT_MS:10000}
+    read-timeout-ms: ${GOOGLE_READ_TIMEOUT_MS:20000}
   gmail:
-    default-limit: 50
+    default-limit: ${GMAIL_DEFAULT_LIMIT:20}
+    max-limit: ${GMAIL_MAX_LIMIT:50}
+  sync:
+    retention-days: ${SYNC_RETENTION_DAYS:45}
 
 # AI Summarization
 ai:

@@ -134,4 +134,10 @@ public class MockEmailStrategy implements EmailProviderStrategy {
       User user, String emailId, List<String> addLabelIds, List<String> removeLabelIds) {
     // No implementation yet
   }
+
+  @Override
+  public List<Message> searchByGmailQuery(User user, String query) {
+    // Mock implementation - returns empty list
+    return List.of();
+  }
 }

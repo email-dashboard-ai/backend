@@ -254,4 +254,18 @@ public class EmailController {
     return ResponseWrapper.success("Email unsnoozed successfully");
   }
 
+  @Operation(
+      summary = "Search Emails",
+      description =
+          "Automatically chooses search strategy based on request fields: "
+              + "Gmail API for structured fields (from, to, subject, after, before), "
+              + "internal fuzzy for body content, or hybrid for both.")
+  @PostMapping("/search")
+  public ResponseWrapper<List<org.example.dto.response.SearchResultDTO>> search(
+      @AuthenticationPrincipal UserDetails userDetails,
+      @RequestBody org.example.dto.request.SearchRequest request) {
+    return ResponseWrapper.success(
+        emailService.search(userDetails.getUsername(), request),
+        "Search results fetched successfully");
+  }
 }

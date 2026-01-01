@@ -12,8 +12,8 @@ public class AppConfig {
 
   @Data
   public static class GmailConfig {
-    private int defaultLimit = 20;
-    private int maxLimit = 50;
+    private int defaultLimit;
+    private int maxLimit;
   }
 
   private GoogleConfig google = new GoogleConfig();
@@ -23,8 +23,14 @@ public class AppConfig {
     private String tokenUri;
     private String redirectUri;
 
-    // Timeouts for OAuth token exchange
-    private int connectTimeoutMs = 10000;
-    private int readTimeoutMs = 20000;
+    private int connectTimeoutMs;
+    private int readTimeoutMs;
+  }
+
+  private SyncConfig sync = new SyncConfig();
+
+  @Data
+  public static class SyncConfig {
+    private int retentionDays;
   }
 }

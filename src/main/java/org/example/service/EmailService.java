@@ -57,4 +57,7 @@ public interface EmailService {
   void unsnoozeEmail(String username, String emailId);
 
   java.util.Map<String, Instant> getSnoozedEmailsInfo(String username);
+
+  java.util.List<org.example.dto.response.SearchResultDTO> search(
+      String email, org.example.dto.request.SearchRequest request);
 }
