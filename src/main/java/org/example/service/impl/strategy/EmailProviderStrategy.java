@@ -59,8 +59,8 @@ public interface EmailProviderStrategy {
       User user, String emailId, List<String> addLabelIds, List<String> removeLabelIds);
 
   /**
-   * Search emails using Gmail API query syntax.
-   * Supports: from:, to:, subject:, after:, before:, in:, has:, is:
+   * Search emails using Gmail API query syntax. Supports: from:, to:, subject:, after:, before:,
+   * in:, has:, is:
    */
   List<Message> searchByGmailQuery(User user, String query);
 

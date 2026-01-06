@@ -693,12 +693,7 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
     Gmail service = getGmailClient(user);
 
     var listRequest =
-        service
-            .users()
-            .messages()
-            .list("me")
-            .setQ(query)
-            .setMaxResults(50L); // Limit results
+        service.users().messages().list("me").setQ(query).setMaxResults(50L); // Limit results
 
     var response = listRequest.execute();
 

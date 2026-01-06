@@ -47,9 +47,10 @@ public class SearchResultDTO {
     }
 
     if (message.getInternalDate() != null) {
-      receivedDate = LocalDateTime.ofInstant(
-          java.time.Instant.ofEpochMilli(message.getInternalDate()),
-          java.time.ZoneId.systemDefault());
+      receivedDate =
+          LocalDateTime.ofInstant(
+              java.time.Instant.ofEpochMilli(message.getInternalDate()),
+              java.time.ZoneId.systemDefault());
     }
 
     return SearchResultDTO.builder()

@@ -37,32 +37,36 @@ class EmailServiceTest {
     syncConfig.setRetentionDays(30);
     lenient().when(appConfig.getSync()).thenReturn(syncConfig);
 
-    emailService = new EmailServiceImpl(
-        userRepository,
-        List.of(emailProviderStrategy),
-        snoozedEmailRepository,
-        syncedEmailRepository,
-        appConfig,
-        searchOrchestrator
-    );
+    emailService =
+        new EmailServiceImpl(
+            userRepository,
+            List.of(emailProviderStrategy),
+            snoozedEmailRepository,
+            syncedEmailRepository,
+            appConfig,
+            searchOrchestrator);
   }
 
   @Test
   void toSyncedEmail_ShouldCorrectlyMapGmailMessage() {
     // Given
-    Message message = new Message()
-        .setId("msg123")
-        .setInternalDate(System.currentTimeMillis())
-        .setSnippet("Email snippet")
-        .setPayload(new MessagePart()
-            .setHeaders(List.of(
-                new MessagePartHeader().setName("Subject").setValue("Test Subject"),
-                new MessagePartHeader().setName("From").setValue("sender@example.com")
-            ))
-            .setMimeType("text/plain")
-            .setBody(new com.google.api.services.gmail.model.MessagePartBody()
-                .setData(java.util.Base64.getUrlEncoder().encodeToString("Email body content".getBytes())))
-        );
+    Message message =
+        new Message()
+            .setId("msg123")
+            .setInternalDate(System.currentTimeMillis())
+            .setSnippet("Email snippet")
+            .setPayload(
+                new MessagePart()
+                    .setHeaders(
+                        List.of(
+                            new MessagePartHeader().setName("Subject").setValue("Test Subject"),
+                            new MessagePartHeader().setName("From").setValue("sender@example.com")))
+                    .setMimeType("text/plain")
+                    .setBody(
+                        new com.google.api.services.gmail.model.MessagePartBody()
+                            .setData(
+                                java.util.Base64.getUrlEncoder()
+                                    .encodeToString("Email body content".getBytes()))));
 
     // When
     SyncedEmail syncedEmail = emailService.toSyncedEmail(message, "user@example.com");
@@ -79,9 +83,8 @@ class EmailServiceTest {
   @Test
   void isWithinRetentionPeriod_ShouldReturnTrue_WhenEmailIsRecent() {
     // Given
-    SyncedEmail email = SyncedEmail.builder()
-        .receivedDate(LocalDateTime.now().minusDays(5))
-        .build();
+    SyncedEmail email =
+        SyncedEmail.builder().receivedDate(LocalDateTime.now().minusDays(5)).build();
 
     // When
     boolean result = emailService.isWithinRetentionPeriod(email);
@@ -93,9 +96,8 @@ class EmailServiceTest {
   @Test
   void isWithinRetentionPeriod_ShouldReturnFalse_WhenEmailIsOld() {
     // Given
-    SyncedEmail email = SyncedEmail.builder()
-        .receivedDate(LocalDateTime.now().minusDays(35))
-        .build();
+    SyncedEmail email =
+        SyncedEmail.builder().receivedDate(LocalDateTime.now().minusDays(35)).build();
 
     // When
     boolean result = emailService.isWithinRetentionPeriod(email);
@@ -119,9 +121,10 @@ class EmailServiceTest {
   @Test
   void getBody_ShouldFallbackToSnippet_WhenBodyIsEmpty() {
     // Given
-    Message message = new Message()
-        .setSnippet("fallback snippet")
-        .setPayload(new MessagePart().setMimeType("text/plain"));
+    Message message =
+        new Message()
+            .setSnippet("fallback snippet")
+            .setPayload(new MessagePart().setMimeType("text/plain"));
 
     // When
     String body = emailService.getBody(message);
