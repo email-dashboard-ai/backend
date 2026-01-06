@@ -301,7 +301,7 @@ public class EmailServiceImpl implements EmailService {
         });
   }
 
-  private boolean isWithinRetentionPeriod(org.example.model.SyncedEmail email) {
+  boolean isWithinRetentionPeriod(org.example.model.SyncedEmail email) {
     return email.getReceivedDate() != null
         && email
             .getReceivedDate()
@@ -309,7 +309,7 @@ public class EmailServiceImpl implements EmailService {
                 java.time.LocalDateTime.now().minusDays(appConfig.getSync().getRetentionDays()));
   }
 
-  private org.example.model.SyncedEmail toSyncedEmail(Message msg, String userEmail) {
+  org.example.model.SyncedEmail toSyncedEmail(Message msg, String userEmail) {
     String subject = getHeader(msg, "Subject");
     String from = getHeader(msg, "From");
     String body = getBody(msg);
@@ -331,7 +331,7 @@ public class EmailServiceImpl implements EmailService {
         .build();
   }
 
-  private String getHeader(Message msg, String name) {
+  String getHeader(Message msg, String name) {
     if (msg.getPayload() == null || msg.getPayload().getHeaders() == null) return "";
     return msg.getPayload().getHeaders().stream()
         .filter(h -> h.getName().equalsIgnoreCase(name))
@@ -340,7 +340,7 @@ public class EmailServiceImpl implements EmailService {
         .orElse("");
   }
 
-  private String getBody(Message msg) {
+  String getBody(Message msg) {
     if (msg.getPayload() == null) return "";
     String bodyPart = getBodyPart(msg.getPayload());
     if (bodyPart != null) {

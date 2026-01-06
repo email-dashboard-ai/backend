@@ -24,7 +24,7 @@ public class SnoozeSchedulerService {
   private final Map<AuthProvider, EmailProviderStrategy> strategies;
 
   @Scheduled(fixedRate = 30000)
-  @Transactional // Fix: Ensure Hibernate session is active for lazy loading
+  @Transactional
   public void wakeUpSnoozeEmail() {
     log.info("Running scheduled task to check for snoozed emails...");
     List<SnoozedEmail> dueEmails = snoozedEmailRepository.findBySnoozedUntilBefore(Instant.now());
