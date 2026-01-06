@@ -27,8 +27,7 @@ class SnoozeSchedulerServiceTest {
 
   @BeforeEach
   void setUp() {
-    Map<AuthProvider, EmailProviderStrategy> strategies =
-        Map.of(AuthProvider.GOOGLE, emailProviderStrategy);
+    Map<AuthProvider, EmailProviderStrategy> strategies = Map.of(AuthProvider.GOOGLE, emailProviderStrategy);
     snoozeSchedulerService = new SnoozeSchedulerService(snoozedEmailRepository, strategies);
   }
 
@@ -51,8 +50,8 @@ class SnoozeSchedulerServiceTest {
     snoozeSchedulerService.wakeUpSnoozeEmail();
 
     // Then
-    verify(emailProviderStrategy)
-        .modifyLabels(eq(user), eq("msg123"), eq(List.of("INBOX")), eq(List.of("SNOOZE_LABEL")));
+    verify(emailProviderStrategy).modifyLabels(
+        eq(user), eq("msg123"), eq(List.of("INBOX")), eq(List.of("SNOOZE_LABEL")));
     verify(snoozedEmailRepository).delete(email);
   }
 
@@ -70,14 +69,13 @@ class SnoozeSchedulerServiceTest {
     email2.setEmailId("msg2");
     email2.setUser(user);
 
-    when(snoozedEmailRepository.findBySnoozedUntilBefore(any()))
-        .thenReturn(List.of(email1, email2));
-
+    when(snoozedEmailRepository.findBySnoozedUntilBefore(any())).thenReturn(List.of(email1, email2));
+    
     // Fail first email, succeed second
     doThrow(new RuntimeException("API Error")).when(emailProviderStrategy).getSnoozedLabelId(user);
-    // Note: Since both emails share the same user and stubbing is on user, it will fail for both
+    // Note: Since both emails share the same user and stubbing is on user, it will fail for both 
     // unless we mock differently. Let's make them separate users or mock leniently.
-
+    
     // Better: Mock modifyLabels to fail for email1
     reset(emailProviderStrategy);
     when(emailProviderStrategy.getSnoozedLabelId(user)).thenReturn("SNOOZE_LABEL");

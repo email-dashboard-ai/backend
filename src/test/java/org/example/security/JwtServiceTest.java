@@ -12,8 +12,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 class JwtServiceTest {
 
   private JwtService jwtService;
-  private final String TEST_SECRET =
-      "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970";
+  private final String TEST_SECRET = "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970";
   private final long TEST_EXPIRATION = 3600000; // 1 hour
 
   @BeforeEach
@@ -70,11 +69,9 @@ class JwtServiceTest {
 
   @Test
   void extractAllClaims_ShouldThrowException_WhenTokenIsInvalid() {
-    assertThrows(
-        IllegalArgumentException.class,
-        () -> {
-          jwtService.extractAllClaims("invalid-token");
-        });
+    assertThrows(IllegalArgumentException.class, () -> {
+      jwtService.extractAllClaims("invalid-token");
+    });
   }
 
   @Test

@@ -11,7 +11,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class SearchOrchestratorTest {
 
-  @InjectMocks private SearchOrchestrator searchOrchestrator;
+  @InjectMocks
+  private SearchOrchestrator searchOrchestrator;
 
   @Test
   void resolve_ShouldReturnInternal_WhenRequestIsNull() {
@@ -22,8 +23,10 @@ class SearchOrchestratorTest {
 
   @Test
   void resolve_ShouldReturnGmailApi_WhenOnlyGmailFieldsPresent() {
-    SearchRequest request =
-        SearchRequest.builder().from("test@example.com").subject("Hello").build();
+    SearchRequest request = SearchRequest.builder()
+        .from("test@example.com")
+        .subject("Hello")
+        .build();
 
     SearchOrchestrator.SearchResult result = searchOrchestrator.resolve(request);
 
@@ -35,7 +38,9 @@ class SearchOrchestratorTest {
 
   @Test
   void resolve_ShouldReturnInternal_WhenOnlyBodyFieldPresent() {
-    SearchRequest request = SearchRequest.builder().body("search term").build();
+    SearchRequest request = SearchRequest.builder()
+        .body("search term")
+        .build();
 
     SearchOrchestrator.SearchResult result = searchOrchestrator.resolve(request);
 
@@ -46,8 +51,10 @@ class SearchOrchestratorTest {
 
   @Test
   void resolve_ShouldReturnHybrid_WhenBothFieldsPresent() {
-    SearchRequest request =
-        SearchRequest.builder().from("test@example.com").body("search term").build();
+    SearchRequest request = SearchRequest.builder()
+        .from("test@example.com")
+        .body("search term")
+        .build();
 
     SearchOrchestrator.SearchResult result = searchOrchestrator.resolve(request);
 
