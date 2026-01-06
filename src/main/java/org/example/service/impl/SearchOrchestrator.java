@@ -5,10 +5,9 @@ import org.example.dto.request.SearchRequest;
 import org.springframework.stereotype.Component;
 
 /**
- * Strategy: GMAIL_API | INTERNAL | HYBRID
- * - GMAIL_API: only Gmail fields (from, to, subject, etc.)
- * - INTERNAL: only body field (fuzzy search)
- * - HYBRID: Gmail fields + body → Gmail filters first, then fuzzy on results
+ * Strategy: GMAIL_API | INTERNAL | HYBRID - GMAIL_API: only Gmail fields (from, to, subject, etc.)
+ * - INTERNAL: only body field (fuzzy search) - HYBRID: Gmail fields + body → Gmail filters first,
+ * then fuzzy on results
  */
 @Component
 public class SearchOrchestrator {
