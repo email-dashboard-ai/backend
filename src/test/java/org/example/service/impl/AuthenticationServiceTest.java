@@ -37,11 +37,12 @@ class AuthenticationServiceTest {
   @Test
   void register_ShouldThrowException_WhenEmailAlreadyExists() {
     // Given
-    RegisterRequest request = RegisterRequest.builder()
-        .name("Test User")
-        .email("test@example.com")
-        .password("password")
-        .build();
+    RegisterRequest request =
+        RegisterRequest.builder()
+            .name("Test User")
+            .email("test@example.com")
+            .password("password")
+            .build();
     when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(new User()));
 
     // When & Then
@@ -57,11 +58,12 @@ class AuthenticationServiceTest {
   @Test
   void register_ShouldSaveUserAndReturnTokens_WhenEmailIsNew() {
     // Given
-    RegisterRequest request = RegisterRequest.builder()
-        .name("Test User")
-        .email("test@example.com")
-        .password("password")
-        .build();
+    RegisterRequest request =
+        RegisterRequest.builder()
+            .name("Test User")
+            .email("test@example.com")
+            .password("password")
+            .build();
     when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.empty());
     when(passwordEncoder.encode("password")).thenReturn("encodedPassword");
     when(jwtService.generateToken(any())).thenReturn("jwtToken");
@@ -82,10 +84,8 @@ class AuthenticationServiceTest {
   @Test
   void authenticate_ShouldReturnTokens_WhenCredentialsAreValid() {
     // Given
-    AuthRequest request = AuthRequest.builder()
-        .email("test@example.com")
-        .password("password")
-        .build();
+    AuthRequest request =
+        AuthRequest.builder().email("test@example.com").password("password").build();
     User user = new User();
     user.setEmail("test@example.com");
 

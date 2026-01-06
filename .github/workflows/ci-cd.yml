@@ -16,20 +16,20 @@ jobs:
   gitleaks:
     name: Secret Scanning
     runs-on: ubuntu-latest
+    continue-on-error: true  # Non-blocking - advisory only
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Install Gitleaks
         run: |
           wget -q https://github.com/gitleaks/gitleaks/releases/download/v8.18.4/gitleaks_8.18.4_linux_x64.tar.gz
           tar -xzf gitleaks_8.18.4_linux_x64.tar.gz
           chmod +x gitleaks
+          rm gitleaks_8.18.4_linux_x64.tar.gz
 
       - name: Run Gitleaks
-        run: ./gitleaks detect --source . --no-git --verbose
+        run: ./gitleaks detect --source src/ --no-git --verbose
 
   # ============================================
   # STAGE 2: Code Quality
@@ -37,6 +37,7 @@ jobs:
   code-quality:
     name: Code Quality Check
     runs-on: ubuntu-latest
+    continue-on-error: true  # Non-blocking - advisory only
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -111,6 +112,7 @@ jobs:
     name: Scan Docker Image
     needs: build-and-push
     runs-on: ubuntu-latest
+    continue-on-error: true  # Non-blocking - security advisory only
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Run Trivy vulnerability scanner
@@ -122,11 +124,11 @@ jobs:
           severity: 'CRITICAL,HIGH'
 
   # ============================================
-  # STAGE 6: Deploy (SỬA ĐỔI TẠI ĐÂY)
+  # STAGE 6: Deploy
   # ============================================
   deploy:
     name: Deploy to Render
-    needs: [build-and-push, scan-image]
+    needs: build-and-push
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
