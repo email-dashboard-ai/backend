@@ -12,8 +12,8 @@ import org.springframework.stereotype.Repository;
 public interface SyncedEmailRepository extends JpaRepository<SyncedEmail, String> {
 
   /**
-   * Fuzzy search using PostgreSQL pg_trgm and unaccent. Matches against subject, sender, or
-   * snippet. Returns results ordered by relevance (similarity).
+   * Fuzzy search using PostgreSQL pg_trgm and unaccent. Matches against subject, sender, snippet,
+   * or body. Returns results ordered by relevance (similarity).
    */
   @Query(
       value =
@@ -23,11 +23,16 @@ public interface SyncedEmailRepository extends JpaRepository<SyncedEmail, String
               + "  unaccent(e.subject) ILIKE unaccent('%' || :query || '%') "
               + "  OR unaccent(e.sender) ILIKE unaccent('%' || :query || '%') "
               + "  OR unaccent(e.snippet) ILIKE unaccent('%' || :query || '%') "
+              + "  OR unaccent(e.body) ILIKE unaccent('%' || :query || '%') "
               + "  OR unaccent(e.subject) % unaccent(:query) "
-              + "  OR unaccent(e.sender) % unaccent(:query)"
+              + "  OR unaccent(e.sender) % unaccent(:query) "
+              + "  OR unaccent(e.body) % unaccent(:query)"
               + ") "
               + "ORDER BY "
-              + "  similarity(unaccent(e.subject), unaccent(:query)) DESC, "
+              + "  GREATEST("
+              + "    similarity(unaccent(e.subject), unaccent(:query)), "
+              + "    similarity(unaccent(e.body), unaccent(:query))"
+              + "  ) DESC, "
               + "  e.received_date DESC",
       nativeQuery = true)
   List<SyncedEmail> searchEmails(
