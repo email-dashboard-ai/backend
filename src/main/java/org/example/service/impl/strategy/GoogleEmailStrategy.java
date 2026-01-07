@@ -263,8 +263,7 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
                                 .users()
                                 .messages()
                                 .get("me", msg.getId())
-                                .setFormat("metadata")
-                                .setMetadataHeaders(List.of("Subject", "From", "To", "Date"))
+                                .setFormat("full")
                                 .execute();
                           } catch (IOException e) {
                             throw new RuntimeException(e);
@@ -714,8 +713,7 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
                                 .users()
                                 .messages()
                                 .get("me", msg.getId())
-                                .setFormat("metadata")
-                                .setMetadataHeaders(List.of("Subject", "From", "To", "Date"))
+                                .setFormat("full")
                                 .execute();
                           } catch (IOException e) {
                             throw new RuntimeException(e);

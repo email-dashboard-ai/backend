@@ -221,8 +221,9 @@ public class EmailServiceImpl implements EmailService {
 
     return switch (result.getStrategy()) {
       case GMAIL_API -> searchByGmailApi(user, result.getGmailQuery());
-      case INTERNAL -> searchInternal(email, result.getFuzzyQuery());
-      case HYBRID -> searchHybrid(user, email, result.getGmailQuery(), result.getFuzzyQuery());
+      case INTERNAL -> searchInternalWithSync(user, email, result.getFuzzyQuery());
+      case HYBRID -> searchHybridWithSync(
+          user, email, result.getGmailQuery(), result.getFuzzyQuery());
     };
   }
 
@@ -234,11 +235,56 @@ public class EmailServiceImpl implements EmailService {
         .collect(Collectors.toList());
   }
 
+  /**
+   * Search internal DB with pre-sync: fetches recent emails from Gmail and syncs them before
+   * searching to ensure body content is available for fuzzy matching.
+   */
+  private List<org.example.dto.response.SearchResultDTO> searchInternalWithSync(
+      User user, String email, String fuzzyQuery) {
+    // Step 1: Fetch and sync recent emails from Gmail (synchronously)
+    syncRecentEmailsForSearch(user, email);
+
+    // Step 2: Search in synced DB
+    var results = syncedEmailRepository.searchEmails(email, fuzzyQuery);
+    return results.stream()
+        .map(e -> org.example.dto.response.SearchResultDTO.fromSyncedEmail(e, "INTERNAL"))
+        .collect(Collectors.toList());
+  }
+
   private List<org.example.dto.response.SearchResultDTO> searchInternal(
       String email, String fuzzyQuery) {
     var results = syncedEmailRepository.searchEmails(email, fuzzyQuery);
     return results.stream()
         .map(e -> org.example.dto.response.SearchResultDTO.fromSyncedEmail(e, "INTERNAL"))
+        .collect(Collectors.toList());
+  }
+
+  /** Hybrid search with pre-sync: syncs Gmail search results before fuzzy matching on body. */
+  private List<org.example.dto.response.SearchResultDTO> searchHybridWithSync(
+      User user, String email, String gmailQuery, String fuzzyQuery) {
+    // Step 1: Use Gmail API to get initial results (these have full body)
+    var gmailMessages = getStrategy(user).searchByGmailQuery(user, gmailQuery);
+
+    if (gmailMessages.isEmpty()) {
+      return List.of();
+    }
+
+    // Step 2: Sync these messages SYNCHRONOUSLY so body is available for fuzzy search
+    syncEmailsSync(gmailMessages, email);
+
+    // Step 3: Extract message IDs from Gmail results
+    var gmailMessageIds =
+        gmailMessages.stream()
+            .map(com.google.api.services.gmail.model.Message::getId)
+            .collect(Collectors.toSet());
+
+    // Step 4: Search internal DB for fuzzy match on body
+    var internalResults = syncedEmailRepository.searchEmails(email, fuzzyQuery);
+
+    // Step 5: Filter internal results to only include emails from Gmail results
+    return internalResults.stream()
+        .filter(e -> gmailMessageIds.contains(e.getMessageId()))
+        .map(e -> org.example.dto.response.SearchResultDTO.fromSyncedEmail(e, "HYBRID"))
         .collect(Collectors.toList());
   }
 
@@ -265,6 +311,56 @@ public class EmailServiceImpl implements EmailService {
         .filter(e -> gmailMessageIds.contains(e.getMessageId()))
         .map(e -> org.example.dto.response.SearchResultDTO.fromSyncedEmail(e, "HYBRID"))
         .collect(Collectors.toList());
+  }
+
+  /**
+   * Sync recent emails from Gmail SYNCHRONOUSLY before searching. This ensures that body content is
+   * available in the database for fuzzy search.
+   */
+  private void syncRecentEmailsForSearch(User user, String userEmail) {
+    try {
+      // Fetch recent emails from INBOX (limit to avoid timeout)
+      var response = getStrategy(user).getEmails(user, "INBOX", null, 50);
+      if (response.getMessages() != null && !response.getMessages().isEmpty()) {
+        syncEmailsSync(response.getMessages(), userEmail);
+        log.debug(
+            "Pre-search sync: synced {} emails for user {}",
+            response.getMessages().size(),
+            userEmail);
+      }
+    } catch (Exception e) {
+      log.warn(
+          "Failed to pre-sync emails for search, continuing with existing data: {}",
+          e.getMessage());
+      // Continue with search even if sync fails - use whatever is already in DB
+    }
+  }
+
+  /** Sync emails SYNCHRONOUSLY (blocking) - used for search to ensure data is available. */
+  private void syncEmailsSync(List<Message> messages, String userEmail) {
+    if (messages == null || messages.isEmpty()) return;
+    try {
+      List<org.example.model.SyncedEmail> syncedEmails =
+          messages.stream()
+              .map(msg -> toSyncedEmail(msg, userEmail))
+              .filter(this::isWithinRetentionPeriod)
+              .collect(Collectors.toList());
+      if (!syncedEmails.isEmpty()) {
+        // Use saveAll with try-catch for each to handle duplicates gracefully
+        for (org.example.model.SyncedEmail email : syncedEmails) {
+          try {
+            syncedEmailRepository.save(email);
+          } catch (Exception e) {
+            // Ignore duplicate key errors, log others
+            if (!e.getMessage().contains("duplicate") && !e.getMessage().contains("constraint")) {
+              log.debug("Failed to sync email {}: {}", email.getMessageId(), e.getMessage());
+            }
+          }
+        }
+      }
+    } catch (Exception e) {
+      log.error("Failed to sync emails for user {}", userEmail, e);
+    }
   }
 
   private void syncEmails(List<Message> messages, String userEmail) {
