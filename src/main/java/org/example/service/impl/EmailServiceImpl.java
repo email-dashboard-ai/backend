@@ -222,8 +222,7 @@ public class EmailServiceImpl implements EmailService {
     return switch (result.getStrategy()) {
       case GMAIL_API -> searchByGmailApi(user, result.getGmailQuery());
       case INTERNAL -> searchInternalWithSync(user, email, result.getFuzzyQuery());
-      case HYBRID -> searchHybridWithSync(
-          user, email, result.getGmailQuery(), result.getFuzzyQuery());
+      case HYBRID -> searchHybridWithSync(user, email, result.getGmailQuery(), result.getFuzzyQuery());
     };
   }
 
@@ -259,7 +258,9 @@ public class EmailServiceImpl implements EmailService {
         .collect(Collectors.toList());
   }
 
-  /** Hybrid search with pre-sync: syncs Gmail search results before fuzzy matching on body. */
+  /**
+   * Hybrid search with pre-sync: syncs Gmail search results before fuzzy matching on body.
+   */
   private List<org.example.dto.response.SearchResultDTO> searchHybridWithSync(
       User user, String email, String gmailQuery, String fuzzyQuery) {
     // Step 1: Use Gmail API to get initial results (these have full body)
@@ -323,20 +324,19 @@ public class EmailServiceImpl implements EmailService {
       var response = getStrategy(user).getEmails(user, "INBOX", null, 50);
       if (response.getMessages() != null && !response.getMessages().isEmpty()) {
         syncEmailsSync(response.getMessages(), userEmail);
-        log.debug(
-            "Pre-search sync: synced {} emails for user {}",
-            response.getMessages().size(),
-            userEmail);
+        log.debug("Pre-search sync: synced {} emails for user {}", 
+            response.getMessages().size(), userEmail);
       }
     } catch (Exception e) {
-      log.warn(
-          "Failed to pre-sync emails for search, continuing with existing data: {}",
+      log.warn("Failed to pre-sync emails for search, continuing with existing data: {}", 
           e.getMessage());
       // Continue with search even if sync fails - use whatever is already in DB
     }
   }
 
-  /** Sync emails SYNCHRONOUSLY (blocking) - used for search to ensure data is available. */
+  /**
+   * Sync emails SYNCHRONOUSLY (blocking) - used for search to ensure data is available.
+   */
   private void syncEmailsSync(List<Message> messages, String userEmail) {
     if (messages == null || messages.isEmpty()) return;
     try {
