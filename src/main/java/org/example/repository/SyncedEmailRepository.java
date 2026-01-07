@@ -13,7 +13,8 @@ public interface SyncedEmailRepository extends JpaRepository<SyncedEmail, String
 
   /**
    * Fuzzy search using PostgreSQL pg_trgm and unaccent. Matches against subject, sender, snippet,
-   * or body. Returns results ordered by relevance (similarity).
+   * or body. Uses word_similarity() for better partial word matching - this finds similar words
+   * within longer text (e.g., "rnder" matches "Render" in "Render <no-reply@render.com>").
    */
   @Query(
       value =
@@ -24,14 +25,15 @@ public interface SyncedEmailRepository extends JpaRepository<SyncedEmail, String
               + "  OR unaccent(e.sender) ILIKE unaccent('%' || :query || '%') "
               + "  OR unaccent(e.snippet) ILIKE unaccent('%' || :query || '%') "
               + "  OR unaccent(e.body) ILIKE unaccent('%' || :query || '%') "
-              + "  OR unaccent(e.subject) % unaccent(:query) "
-              + "  OR unaccent(e.sender) % unaccent(:query) "
-              + "  OR unaccent(e.body) % unaccent(:query)"
+              + "  OR word_similarity(unaccent(:query), unaccent(e.subject)) > 0.3 "
+              + "  OR word_similarity(unaccent(:query), unaccent(e.sender)) > 0.3 "
+              + "  OR word_similarity(unaccent(:query), unaccent(e.body)) > 0.3"
               + ") "
               + "ORDER BY "
               + "  GREATEST("
-              + "    similarity(unaccent(e.subject), unaccent(:query)), "
-              + "    similarity(unaccent(e.body), unaccent(:query))"
+              + "    word_similarity(unaccent(:query), unaccent(e.subject)), "
+              + "    word_similarity(unaccent(:query), unaccent(e.sender)), "
+              + "    word_similarity(unaccent(:query), unaccent(e.body))"
               + "  ) DESC, "
               + "  e.received_date DESC",
       nativeQuery = true)
