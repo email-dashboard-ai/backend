@@ -142,7 +142,9 @@ public class EmailController {
     return ResponseWrapper.success(null, "Email moved to Inbox");
   }
 
-  @Operation(summary = "Permanently Delete Email", description = "Permanently deletes an email (cannot be recovered).")
+  @Operation(
+      summary = "Permanently Delete Email",
+      description = "Permanently deletes an email (cannot be recovered).")
   @DeleteMapping("/{id}/permanent")
   public ResponseWrapper<Void> permanentlyDelete(
       @AuthenticationPrincipal UserDetails userDetails, @PathVariable String id) {
