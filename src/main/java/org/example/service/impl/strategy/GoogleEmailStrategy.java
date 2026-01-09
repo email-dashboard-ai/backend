@@ -176,6 +176,16 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
   }
 
   @Override
+  public void permanentlyDelete(User user, String messageId) {
+    executeWithRetry(
+        user,
+        () -> {
+          executePermanentlyDelete(user, messageId);
+          return null;
+        });
+  }
+
+  @Override
   public void batchDeleteEmails(User user, List<String> messageIds) {
     executeWithRetry(
         user,
@@ -406,6 +416,11 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
   private void executeUntrashEmail(User user, String messageId) throws IOException {
     Gmail service = getGmailClient(user);
     service.users().messages().untrash("me", messageId).execute();
+  }
+
+  private void executePermanentlyDelete(User user, String messageId) throws IOException {
+    Gmail service = getGmailClient(user);
+    service.users().messages().delete("me", messageId).execute();
   }
 
   // ===============================================================================================

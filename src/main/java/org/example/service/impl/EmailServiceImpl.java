@@ -101,6 +101,22 @@ public class EmailServiceImpl implements EmailService {
   }
 
   @Override
+  public void moveToInbox(String email, String messageId) {
+    User user = userRepository.findByEmail(email).orElseThrow();
+    EmailProviderStrategy strategy = getStrategy(user);
+    // Remove TRASH and SPAM labels, add INBOX
+    strategy.modifyLabels(user, messageId, List.of("INBOX"), List.of("TRASH", "SPAM"));
+    log.info("Moved email {} to Inbox for user {}", messageId, email);
+  }
+
+  @Override
+  public void permanentlyDelete(String email, String messageId) {
+    User user = userRepository.findByEmail(email).orElseThrow();
+    getStrategy(user).permanentlyDelete(user, messageId);
+    log.info("Permanently deleted email {} for user {}", messageId, email);
+  }
+
+  @Override
   public void batchDeleteEmails(String email, List<String> messageIds) {
     User user = userRepository.findByEmail(email).orElseThrow();
     getStrategy(user).batchDeleteEmails(user, messageIds);

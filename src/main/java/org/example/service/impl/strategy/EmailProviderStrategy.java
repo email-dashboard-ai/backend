@@ -25,6 +25,8 @@ public interface EmailProviderStrategy {
 
   void untrashEmail(User user, String messageId);
 
+  void permanentlyDelete(User user, String messageId);
+
   void batchDeleteEmails(User user, List<String> messageIds);
 
   void batchMarkAsRead(User user, List<String> messageIds);

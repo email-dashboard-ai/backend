@@ -134,6 +134,22 @@ public class EmailController {
     return ResponseWrapper.success(null, "Email restored from trash");
   }
 
+  @Operation(summary = "Move to Inbox", description = "Moves an email from Trash or Spam to Inbox.")
+  @PostMapping("/{id}/move-to-inbox")
+  public ResponseWrapper<Void> moveToInbox(
+      @AuthenticationPrincipal UserDetails userDetails, @PathVariable String id) {
+    emailService.moveToInbox(userDetails.getUsername(), id);
+    return ResponseWrapper.success(null, "Email moved to Inbox");
+  }
+
+  @Operation(summary = "Permanently Delete Email", description = "Permanently deletes an email (cannot be recovered).")
+  @DeleteMapping("/{id}/permanent")
+  public ResponseWrapper<Void> permanentlyDelete(
+      @AuthenticationPrincipal UserDetails userDetails, @PathVariable String id) {
+    emailService.permanentlyDelete(userDetails.getUsername(), id);
+    return ResponseWrapper.success(null, "Email permanently deleted");
+  }
+
   @Operation(summary = "Batch Delete Emails", description = "Moves multiple emails to trash.")
   @PostMapping("/batch/delete")
   public ResponseWrapper<Void> batchDeleteEmails(
