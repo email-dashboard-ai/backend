@@ -75,6 +75,11 @@ public class MockEmailStrategy implements EmailProviderStrategy {
   }
 
   @Override
+  public void permanentlyDelete(User user, String messageId) {
+    // Mock implementation - no-op
+  }
+
+  @Override
   public void batchDeleteEmails(User user, List<String> messageIds) {
     // Mock implementation - no-op
   }
