@@ -152,19 +152,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
   @Override
   public AuthResponse refreshToken(RefreshTokenRequest request) {
     log.info("Refreshing token");
-    return refreshTokenService
-        .findByToken(request.getToken())
-        .map(refreshTokenService::verifyExpiration)
-        .map(RefreshToken::getUser)
-        .map(
-            user -> {
-              String accessToken = jwtService.generateToken(user);
-              return AuthResponse.builder()
-                  .accessToken(accessToken)
-                  .refreshToken(request.getToken())
-                  .build();
-            })
-        .orElseThrow(() -> new TokenRefreshException("Refresh token is not in database!"));
+    String accessToken =
+        refreshTokenService.processRefreshTokenWithLock(
+            request.getToken(), jwtService::generateToken);
+    return AuthResponse.builder()
+        .accessToken(accessToken)
+        .refreshToken(request.getToken())
+        .build();
   }
 
   @Override
