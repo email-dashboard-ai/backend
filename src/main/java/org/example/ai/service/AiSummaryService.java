@@ -155,18 +155,26 @@ public class AiSummaryService {
       cache().put(cacheKey, result);
 
       // Save to database for persistence (encrypted)
-      // Using insertIgnoreDuplicate to handle race conditions gracefully
+      // Double-check DB first to avoid sequence race condition
       try {
-        // Encrypt summary before storing
-        String encryptedSummary = encryptionService.encrypt(result.getSummary());
-        emailSummaryRepository.insertIgnoreDuplicate(
-            messageId,
-            username,
-            contentHash,
-            encryptedSummary,
-            result.getProvider(),
-            result.getModel());
-        log.debug("[DB SAVE] messageId={} (encrypted)", messageId);
+        // Check if already saved by another thread
+        Optional<EmailSummary> existing =
+            emailSummaryRepository.findByMessageIdAndUserEmailAndContentHash(
+                messageId, username, contentHash);
+        if (existing.isEmpty()) {
+          // Encrypt summary before storing
+          String encryptedSummary = encryptionService.encrypt(result.getSummary());
+          emailSummaryRepository.insertIgnoreDuplicate(
+              messageId,
+              username,
+              contentHash,
+              encryptedSummary,
+              result.getProvider(),
+              result.getModel());
+          log.debug("[DB SAVE] messageId={} (encrypted)", messageId);
+        } else {
+          log.debug("[DB SKIP] messageId={} already exists in DB", messageId);
+        }
       } catch (Exception e) {
         // Don't fail the request if DB save fails - we still have the result
         log.warn("Failed to persist summary to DB for messageId={}: {}", messageId, e.getMessage());
