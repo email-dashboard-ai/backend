@@ -390,7 +390,17 @@ public class EmailServiceImpl implements EmailService {
                     .filter(this::isWithinRetentionPeriod)
                     .collect(Collectors.toList());
             if (!syncedEmails.isEmpty()) {
-              syncedEmailRepository.saveAll(syncedEmails);
+              // Handle duplicates gracefully - save one by one and ignore constraint violations
+              for (org.example.model.SyncedEmail email : syncedEmails) {
+                try {
+                  syncedEmailRepository.save(email);
+                } catch (Exception e) {
+                  // Ignore duplicate key errors, log others
+                  if (!e.getMessage().contains("duplicate") && !e.getMessage().contains("constraint")) {
+                    log.debug("Failed to sync email {}: {}", email.getMessageId(), e.getMessage());
+                  }
+                }
+              }
             }
           } catch (Exception e) {
             log.error("Failed to sync emails for user {}", userEmail, e);
