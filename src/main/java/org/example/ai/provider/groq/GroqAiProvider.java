@@ -32,6 +32,11 @@ public class GroqAiProvider implements AiProvider {
 
   @Override
   public AiSummaryResult summarize(String inputText) {
+    return summarize(inputText, null);
+  }
+
+  @Override
+  public AiSummaryResult summarize(String inputText, String customPrompt) {
     String apiKey = aiConfig.getGroq().getApiKey();
     if (apiKey == null || apiKey.isBlank()) {
       throw new AiException(
@@ -41,7 +46,11 @@ public class GroqAiProvider implements AiProvider {
     }
 
     String model = aiConfig.getGroq().getModel();
-    String prompt = aiConfig.getSummaryPrompt() + "\n\nEMAIL:\n" + inputText + "\n\nSUMMARY:";
+    // Use custom prompt if provided, otherwise fall back to default
+    String systemPrompt = (customPrompt != null && !customPrompt.isBlank()) 
+        ? customPrompt 
+        : aiConfig.getSummaryPrompt();
+    String prompt = systemPrompt + "\n\nEMAIL:\n" + inputText + "\n\nSUMMARY:";
 
     long start = System.nanoTime();
     try {

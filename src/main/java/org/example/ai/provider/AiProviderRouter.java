@@ -27,6 +27,10 @@ public class AiProviderRouter {
   }
 
   public AiSummaryResult summarize(String inputText) {
+    return summarize(inputText, null);
+  }
+
+  public AiSummaryResult summarize(String inputText, String customPrompt) {
     AiProviderId providerId = parseProvider(aiConfig.getProvider());
     AiProvider provider = providers.get(providerId);
     if (provider == null) {
@@ -35,7 +39,7 @@ public class AiProviderRouter {
           ErrorCode.ERR_AI_CONFIG,
           "AI provider not configured: " + providerId);
     }
-    return provider.summarize(inputText);
+    return provider.summarize(inputText, customPrompt);
   }
 
   private AiProviderId parseProvider(String value) {

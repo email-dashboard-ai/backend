@@ -49,4 +49,29 @@ public class AiSummaryController {
 
     return ResponseWrapper.success(response, "Email summarized successfully");
   }
+
+  @Operation(
+      summary = "Regenerate email summary",
+      description = "Force regenerates AI summary bypassing cache. Uses user's custom prompt if set.")
+  @PostMapping("/email-summary/regenerate")
+  public ResponseWrapper<AiEmailSummaryResponse> regenerateSummary(
+      @AuthenticationPrincipal UserDetails userDetails,
+      @RequestBody AiEmailSummaryRequest request) {
+    AiSummaryResult result =
+        aiSummaryService.regenerateSummary(
+            userDetails.getUsername(), request.getMessageId(), request.getContent());
+
+    AiEmailSummaryResponse response =
+        AiEmailSummaryResponse.builder()
+            .messageId(request.getMessageId())
+            .summary(result.getSummary())
+            .provider(result.getProvider())
+            .model(result.getModel())
+            .cached(false)
+            .source(result.getSource())
+            .latencyMs(result.getLatencyMs())
+            .build();
+
+    return ResponseWrapper.success(response, "Email summary regenerated successfully");
+  }
 }

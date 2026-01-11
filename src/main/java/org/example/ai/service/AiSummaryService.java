@@ -19,7 +19,9 @@ import org.example.ai.util.GmailMessageTextExtractor;
 import org.example.ai.util.InMemoryTtlCache;
 import org.example.enums.ErrorCode;
 import org.example.model.EmailSummary;
+import org.example.model.User;
 import org.example.repository.EmailSummaryRepository;
+import org.example.repository.UserRepository;
 import org.example.service.EmailService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -33,6 +35,7 @@ public class AiSummaryService {
   private final EmailService emailService;
   private final EmailSummaryRepository emailSummaryRepository;
   private final EncryptionService encryptionService;
+  private final UserRepository userRepository;
 
   private volatile InMemoryTtlCache<String, AiSummaryResult> cache;
 
@@ -48,15 +51,74 @@ public class AiSummaryService {
     return cache;
   }
 
+  /**
+   * Regenerate summary bypassing all caches. Always calls AI provider.
+   * Updates the cached result after regeneration.
+   */
+  public AiSummaryResult regenerateSummary(String username, String messageId, String content) {
+    if (messageId == null || messageId.isBlank()) {
+      throw new AiException(
+          HttpStatus.BAD_REQUEST, ErrorCode.ERR_AI_REQUEST_INVALID, "messageId is required");
+    }
+
+    // Fetch user's custom prompt (if any)
+    String customPrompt = userRepository.findByEmail(username)
+        .map(User::getCustomSummaryPrompt)
+        .filter(p -> p != null && !p.isBlank())
+        .orElse(null);
+
+    String input = buildInput(username, messageId, content);
+    String promptHash = customPrompt != null ? sha256Hex(customPrompt).substring(0, 8) : "default";
+    String contentHash = sha256Hex(input);
+    String cacheKey = messageId + ":" + contentHash + ":" + promptHash;
+
+    log.debug("[REGENERATE] messageId={}, customPrompt={}", messageId, customPrompt != null ? "yes" : "no");
+    
+    // Call AI provider directly (bypass cache)
+    AiSummaryResult result = aiProviderRouter.summarize(input, customPrompt);
+
+    // Update L1 cache
+    cache().put(cacheKey, result);
+
+    // Update database (delete old and insert new)
+    try {
+      // Delete existing summary for this user+message (any content hash)
+      emailSummaryRepository.deleteByMessageIdAndUserEmail(messageId, username);
+      
+      // Insert new summary
+      String encryptedSummary = encryptionService.encrypt(result.getSummary());
+      emailSummaryRepository.insertIgnoreDuplicate(
+          messageId,
+          username,
+          contentHash,
+          encryptedSummary,
+          result.getProvider(),
+          result.getModel());
+      log.debug("[DB REGENERATE] messageId={} updated", messageId);
+    } catch (Exception e) {
+      log.warn("Failed to update regenerated summary in DB for messageId={}: {}", messageId, e.getMessage());
+    }
+
+    return result;
+  }
+
   public AiSummaryResult summarizeEmail(String username, String messageId, String content) {
     if (messageId == null || messageId.isBlank()) {
       throw new AiException(
           HttpStatus.BAD_REQUEST, ErrorCode.ERR_AI_REQUEST_INVALID, "messageId is required");
     }
 
+    // Fetch user's custom prompt (if any)
+    String customPrompt = userRepository.findByEmail(username)
+        .map(User::getCustomSummaryPrompt)
+        .filter(p -> p != null && !p.isBlank())
+        .orElse(null);
+
     String input = buildInput(username, messageId, content);
+    // Include custom prompt hash in cache key to differentiate results
+    String promptHash = customPrompt != null ? sha256Hex(customPrompt).substring(0, 8) : "default";
     String contentHash = sha256Hex(input);
-    String cacheKey = messageId + ":" + contentHash;
+    String cacheKey = messageId + ":" + contentHash + ":" + promptHash;
 
     // L1: Check in-memory cache first (fastest)
     Optional<AiSummaryResult> memoryCached = cache().get(cacheKey);
@@ -98,7 +160,7 @@ public class AiSummaryService {
 
     // L3: Call AI provider with per-key lock to prevent duplicate calls
     // This ensures only ONE request calls AI for the same email, others wait and get cached result
-    return callAiWithLock(cacheKey, messageId, username, contentHash, input);
+    return callAiWithLock(cacheKey, messageId, username, contentHash, input, customPrompt);
   }
 
   /**
@@ -107,7 +169,7 @@ public class AiSummaryService {
    * cached result.
    */
   private AiSummaryResult callAiWithLock(
-      String cacheKey, String messageId, String username, String contentHash, String input) {
+      String cacheKey, String messageId, String username, String contentHash, String input, String customPrompt) {
     ReentrantLock lock = keyLocks.computeIfAbsent(cacheKey, k -> new ReentrantLock());
     lock.lock();
     try {
@@ -147,9 +209,9 @@ public class AiSummaryService {
         return result;
       }
 
-      // Now safe to call AI - we hold the lock
-      log.debug("[AI CALL] messageId={}", messageId);
-      AiSummaryResult result = aiProviderRouter.summarize(input);
+      // Now safe to call AI - we hold the lock (with custom prompt if provided)
+      log.debug("[AI CALL] messageId={}, customPrompt={}", messageId, customPrompt != null ? "yes" : "no");
+      AiSummaryResult result = aiProviderRouter.summarize(input, customPrompt);
 
       // Save to L1 cache
       cache().put(cacheKey, result);

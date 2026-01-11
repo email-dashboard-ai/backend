@@ -34,4 +34,15 @@ public interface EmailSummaryRepository extends JpaRepository<EmailSummary, Long
       @Param("summary") String summary,
       @Param("provider") String provider,
       @Param("model") String model);
+
+  /**
+   * Delete all summaries for a specific message and user.
+   * Used when regenerating summaries to clear old cached versions.
+   */
+  @Modifying
+  @Transactional
+  @Query("DELETE FROM EmailSummary e WHERE e.messageId = :messageId AND e.userEmail = :userEmail")
+  void deleteByMessageIdAndUserEmail(
+      @Param("messageId") String messageId,
+      @Param("userEmail") String userEmail);
 }

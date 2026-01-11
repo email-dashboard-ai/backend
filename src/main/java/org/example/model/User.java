@@ -38,6 +38,9 @@ public class User extends BaseEntity implements UserDetails {
   @Column(length = 2048)
   private String googleRefreshToken;
 
+  @Column(length = 4096)
+  private String customSummaryPrompt;
+
   @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
   private Set<SnoozedEmail> snoozedEmails;
 
