@@ -90,7 +90,9 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
    * refresh token at a time. Concurrent requests will wait and receive the same cached access
    * token.
    */
-  public String processRefreshTokenWithLock(String refreshTokenStr, TokenGenerator tokenGenerator) {
+  @Override
+  public String processRefreshTokenWithLock(
+      String refreshTokenStr, RefreshTokenService.TokenGenerator tokenGenerator) {
     ReentrantLock lock = tokenLocks.computeIfAbsent(refreshTokenStr, k -> new ReentrantLock());
     lock.lock();
     try {
