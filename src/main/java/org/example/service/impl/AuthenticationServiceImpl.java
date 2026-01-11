@@ -153,10 +153,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     String accessToken =
         refreshTokenService.processRefreshTokenWithLock(
             request.getToken(), jwtService::generateToken);
-    return AuthResponse.builder()
-        .accessToken(accessToken)
-        .refreshToken(request.getToken())
-        .build();
+    return AuthResponse.builder().accessToken(accessToken).refreshToken(request.getToken()).build();
   }
 
   @Override

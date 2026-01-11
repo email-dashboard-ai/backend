@@ -292,7 +292,7 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
 
   private Message executeGetDetail(User user, String messageId) throws IOException {
     Gmail service = getGmailClient(user);
-    return service.users().messages().get("me", messageId).execute();
+    return service.users().messages().get("me", messageId).setFormat("full").execute();
   }
 
   private List<Message> executeGetThreadMessages(User user, String threadId) throws IOException {
