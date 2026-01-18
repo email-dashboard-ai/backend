@@ -85,9 +85,9 @@ public class AiSummaryService {
       // Delete existing summary for this user+message (any content hash)
       emailSummaryRepository.deleteByMessageIdAndUserEmail(messageId, username);
       
-      // Insert new summary
+      // Insert new summary using JPA
       String encryptedSummary = encryptionService.encrypt(result.getSummary());
-      emailSummaryRepository.insertIgnoreDuplicate(
+      emailSummaryRepository.saveIfNotExists(
           messageId,
           username,
           contentHash,
@@ -226,7 +226,7 @@ public class AiSummaryService {
         if (existing.isEmpty()) {
           // Encrypt summary before storing
           String encryptedSummary = encryptionService.encrypt(result.getSummary());
-          emailSummaryRepository.insertIgnoreDuplicate(
+          emailSummaryRepository.saveIfNotExists(
               messageId,
               username,
               contentHash,

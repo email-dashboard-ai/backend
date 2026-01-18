@@ -45,4 +45,30 @@ public interface EmailSummaryRepository extends JpaRepository<EmailSummary, Long
   void deleteByMessageIdAndUserEmail(
       @Param("messageId") String messageId,
       @Param("userEmail") String userEmail);
+
+
+  @Transactional
+  default void saveIfNotExists(
+      String messageId,
+      String userEmail,
+      String contentHash,
+      String summary,
+      String provider,
+      String model) {
+    // Check if already exists
+    Optional<EmailSummary> existing = findByMessageIdAndUserEmailAndContentHash(
+        messageId, userEmail, contentHash);
+    
+    if (existing.isEmpty()) {
+      EmailSummary entity = EmailSummary.builder()
+          .messageId(messageId)
+          .userEmail(userEmail)
+          .contentHash(contentHash)
+          .summary(summary)
+          .provider(provider)
+          .model(model)
+          .build();
+      save(entity);
+    }
+  }
 }
