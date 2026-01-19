@@ -32,7 +32,9 @@ public class KanbanController {
   // Column Management
   // ============================================================================
 
-  @Operation(summary = "Get Kanban Columns", description = "Returns all Kanban columns for the current user, ordered by position.")
+  @Operation(
+      summary = "Get Kanban Columns",
+      description = "Returns all Kanban columns for the current user, ordered by position.")
   @GetMapping("/columns")
   public ResponseWrapper<List<KanbanColumnResponse>> getColumns(
       @AuthenticationPrincipal UserDetails userDetails) {
@@ -41,7 +43,10 @@ public class KanbanController {
         "Columns fetched successfully");
   }
 
-  @Operation(summary = "Create Kanban Column", description = "Creates a new Kanban column. Automatically creates a Gmail label or links to an existing one with the same name.")
+  @Operation(
+      summary = "Create Kanban Column",
+      description =
+          "Creates a new Kanban column. Automatically creates a Gmail label or links to an existing one with the same name.")
   @PostMapping("/columns")
   public ResponseWrapper<KanbanColumnResponse> createColumn(
       @AuthenticationPrincipal UserDetails userDetails,
@@ -52,7 +57,9 @@ public class KanbanController {
         "Column created successfully");
   }
 
-  @Operation(summary = "Update Kanban Column", description = "Updates an existing Kanban column. Renames Gmail label if column is mapped.")
+  @Operation(
+      summary = "Update Kanban Column",
+      description = "Updates an existing Kanban column. Renames Gmail label if column is mapped.")
   @PutMapping("/columns/{id}")
   public ResponseWrapper<KanbanColumnResponse> updateColumn(
       @AuthenticationPrincipal UserDetails userDetails,
@@ -64,7 +71,10 @@ public class KanbanController {
         "Column updated successfully");
   }
 
-  @Operation(summary = "Delete Kanban Column", description = "Deletes a Kanban column. Also deletes the Gmail label if column is mapped. Cannot delete default columns.")
+  @Operation(
+      summary = "Delete Kanban Column",
+      description =
+          "Deletes a Kanban column. Also deletes the Gmail label if column is mapped. Cannot delete default columns.")
   @DeleteMapping("/columns/{id}")
   public ResponseWrapper<Void> deleteColumn(
       @AuthenticationPrincipal UserDetails userDetails, @PathVariable Long id) throws IOException {
@@ -76,7 +86,9 @@ public class KanbanController {
   // Email Status Management
   // ============================================================================
 
-  @Operation(summary = "Get Kanban Statuses", description = "Returns a map of email IDs to their Kanban status.")
+  @Operation(
+      summary = "Get Kanban Statuses",
+      description = "Returns a map of email IDs to their Kanban status.")
   @GetMapping("/statuses")
   public ResponseWrapper<Map<String, KanbanStatus>> getStatuses(
       @AuthenticationPrincipal UserDetails userDetails) {
@@ -85,7 +97,9 @@ public class KanbanController {
         "Statuses fetched successfully");
   }
 
-  @Operation(summary = "Update Email Status", description = "Updates the Kanban status of an email.")
+  @Operation(
+      summary = "Update Email Status",
+      description = "Updates the Kanban status of an email.")
   @PostMapping("/status")
   public ResponseWrapper<Void> updateStatus(
       @AuthenticationPrincipal UserDetails userDetails,
@@ -95,7 +109,9 @@ public class KanbanController {
     return ResponseWrapper.success(null, "Status updated successfully");
   }
 
-  @Operation(summary = "Move Email to Column", description = "Moves an email to a target column, updating status and Gmail labels.")
+  @Operation(
+      summary = "Move Email to Column",
+      description = "Moves an email to a target column, updating status and Gmail labels.")
   @PostMapping("/move")
   public ResponseWrapper<Void> moveEmail(
       @AuthenticationPrincipal UserDetails userDetails,
