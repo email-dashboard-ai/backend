@@ -36,8 +36,12 @@ public class SearchRequest {
   private Boolean isRead;
   private Boolean isImportant;
 
-  // Fuzzy search field → strategy: INTERNAL or HYBRID
+  // Fuzzy search field → strategy: INTERNAL or HYBRID (only when useFuzzySearch=true)
   private String body;
+
+  // When true, uses PostgreSQL trigram for typo-tolerant search (slower)
+  // When false/null, uses Gmail API for exact body text search (faster)
+  private Boolean useFuzzySearch;
 
   private static final DateTimeFormatter GMAIL_DATE_FORMAT =
       DateTimeFormatter.ofPattern("yyyy/MM/dd");
@@ -60,8 +64,20 @@ public class SearchRequest {
         || isImportant != null;
   }
 
+  /**
+   * Returns true only if user wants fuzzy/typo-tolerant search. Requires both body field AND
+   * useFuzzySearch=true.
+   */
   public boolean hasFuzzyFields() {
-    return isNotBlank(body);
+    return isNotBlank(body) && Boolean.TRUE.equals(useFuzzySearch);
+  }
+
+  /**
+   * Returns true if there's body text for simple (exact) search. Used when useFuzzySearch is not
+   * enabled.
+   */
+  public boolean hasBodySearch() {
+    return isNotBlank(body) && !Boolean.TRUE.equals(useFuzzySearch);
   }
 
   public String toGmailQuery() {
@@ -83,6 +99,12 @@ public class SearchRequest {
     if (isRead != null && isRead) query.append("is:read ");
     if (isStarred != null && isStarred) query.append("is:starred ");
     if (isImportant != null && isImportant) query.append("is:important ");
+
+    // Include body text for Gmail search (when not using fuzzy)
+    if (isNotBlank(body) && !Boolean.TRUE.equals(useFuzzySearch)) {
+      // Use quotes for exact phrase search, matching Gmail web behavior
+      query.append("\"").append(body).append("\" ");
+    }
 
     return query.toString().trim();
   }

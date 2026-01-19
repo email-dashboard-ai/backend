@@ -706,8 +706,10 @@ public class GoogleEmailStrategy implements EmailProviderStrategy {
   private List<Message> executeSearchByGmailQuery(User user, String query) throws IOException {
     Gmail service = getGmailClient(user);
 
+    log.info("Gmail API Search Query: \"{}\"", query);
+
     var listRequest =
-        service.users().messages().list("me").setQ(query).setMaxResults(50L); // Limit results
+        service.users().messages().list("me").setQ(query).setMaxResults(200L); // Increased limit
 
     var response = listRequest.execute();
 

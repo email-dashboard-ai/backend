@@ -48,11 +48,11 @@ public class UserController {
 
   @Operation(
       summary = "Update User Settings",
-      description = "Updates the current user's settings. Set customSummaryPrompt to null or empty to use default prompt.")
+      description =
+          "Updates the current user's settings. Set customSummaryPrompt to null or empty to use default prompt.")
   @PutMapping("/settings")
   public ResponseWrapper<UserSettingsResponse> updateUserSettings(
-      Principal principal,
-      @RequestBody UpdateUserSettingsRequest request) {
+      Principal principal, @RequestBody UpdateUserSettingsRequest request) {
     return ResponseWrapper.success(
         userService.updateUserSettings(principal.getName(), request),
         "User settings updated successfully");

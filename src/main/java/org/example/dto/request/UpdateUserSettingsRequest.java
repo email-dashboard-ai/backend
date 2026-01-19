@@ -14,7 +14,8 @@ import lombok.NoArgsConstructor;
 public class UpdateUserSettingsRequest {
 
   @Schema(
-      description = "Custom AI summary prompt for email summarization. Set to null or empty to use default prompt.",
+      description =
+          "Custom AI summary prompt for email summarization. Set to null or empty to use default prompt.",
       example = "Summarize this email in Vietnamese, focusing on action items and deadlines.",
       requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   private String customSummaryPrompt;

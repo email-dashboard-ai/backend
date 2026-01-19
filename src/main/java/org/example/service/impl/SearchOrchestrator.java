@@ -31,22 +31,38 @@ public class SearchOrchestrator {
     }
   }
 
+  /**
+   * Determines search strategy based on request fields: - GMAIL_API: Default for all searches
+   * (fastest). Used for Gmail fields and simple body search. - INTERNAL: Only when
+   * useFuzzySearch=true and only body field is used (typo tolerance). - HYBRID: Only when
+   * useFuzzySearch=true AND Gmail fields + body are used.
+   */
   public SearchResult resolve(SearchRequest request) {
     if (request == null) {
-      return new SearchResult(Strategy.INTERNAL, null, "");
+      return new SearchResult(Strategy.GMAIL_API, "", null);
     }
 
     boolean hasGmailFields = request.hasGmailFields();
-    boolean hasFuzzyFields = request.hasFuzzyFields();
+    boolean hasFuzzyFields = request.hasFuzzyFields(); // body + useFuzzySearch=true
+    boolean hasBodySearch = request.hasBodySearch(); // body without fuzzy
 
-    if (hasGmailFields && hasFuzzyFields) {
+    // Case 1: Fuzzy search explicitly enabled with Gmail filters -> HYBRID
+    if (hasFuzzyFields && hasGmailFields) {
       return new SearchResult(Strategy.HYBRID, request.toGmailQuery(), request.getBody());
-    } else if (hasGmailFields) {
-      return new SearchResult(Strategy.GMAIL_API, request.toGmailQuery(), null);
-    } else if (hasFuzzyFields) {
-      return new SearchResult(Strategy.INTERNAL, null, request.getBody());
-    } else {
-      return new SearchResult(Strategy.INTERNAL, null, "");
     }
+
+    // Case 2: Fuzzy search explicitly enabled, body only -> INTERNAL
+    if (hasFuzzyFields) {
+      return new SearchResult(Strategy.INTERNAL, null, request.getBody());
+    }
+
+    // Case 3: DEFAULT - Use Gmail API for everything (Gmail fields and/or body search)
+    // This is 6-10x faster than INTERNAL strategy
+    if (hasGmailFields || hasBodySearch) {
+      return new SearchResult(Strategy.GMAIL_API, request.toGmailQuery(), null);
+    }
+
+    // Case 4: Empty search
+    return new SearchResult(Strategy.GMAIL_API, "", null);
   }
 }

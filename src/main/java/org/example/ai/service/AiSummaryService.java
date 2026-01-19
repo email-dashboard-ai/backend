@@ -52,8 +52,8 @@ public class AiSummaryService {
   }
 
   /**
-   * Regenerate summary bypassing all caches. Always calls AI provider.
-   * Updates the cached result after regeneration.
+   * Regenerate summary bypassing all caches. Always calls AI provider. Updates the cached result
+   * after regeneration.
    */
   public AiSummaryResult regenerateSummary(String username, String messageId, String content) {
     if (messageId == null || messageId.isBlank()) {
@@ -62,18 +62,23 @@ public class AiSummaryService {
     }
 
     // Fetch user's custom prompt (if any)
-    String customPrompt = userRepository.findByEmail(username)
-        .map(User::getCustomSummaryPrompt)
-        .filter(p -> p != null && !p.isBlank())
-        .orElse(null);
+    String customPrompt =
+        userRepository
+            .findByEmail(username)
+            .map(User::getCustomSummaryPrompt)
+            .filter(p -> p != null && !p.isBlank())
+            .orElse(null);
 
     String input = buildInput(username, messageId, content);
     String promptHash = customPrompt != null ? sha256Hex(customPrompt).substring(0, 8) : "default";
     String contentHash = sha256Hex(input);
     String cacheKey = messageId + ":" + contentHash + ":" + promptHash;
 
-    log.debug("[REGENERATE] messageId={}, customPrompt={}", messageId, customPrompt != null ? "yes" : "no");
-    
+    log.debug(
+        "[REGENERATE] messageId={}, customPrompt={}",
+        messageId,
+        customPrompt != null ? "yes" : "no");
+
     // Call AI provider directly (bypass cache)
     AiSummaryResult result = aiProviderRouter.summarize(input, customPrompt);
 
@@ -84,10 +89,10 @@ public class AiSummaryService {
     try {
       // Delete existing summary for this user+message (any content hash)
       emailSummaryRepository.deleteByMessageIdAndUserEmail(messageId, username);
-      
-      // Insert new summary
+
+      // Insert new summary using JPA
       String encryptedSummary = encryptionService.encrypt(result.getSummary());
-      emailSummaryRepository.insertIgnoreDuplicate(
+      emailSummaryRepository.saveIfNotExists(
           messageId,
           username,
           contentHash,
@@ -96,7 +101,10 @@ public class AiSummaryService {
           result.getModel());
       log.debug("[DB REGENERATE] messageId={} updated", messageId);
     } catch (Exception e) {
-      log.warn("Failed to update regenerated summary in DB for messageId={}: {}", messageId, e.getMessage());
+      log.warn(
+          "Failed to update regenerated summary in DB for messageId={}: {}",
+          messageId,
+          e.getMessage());
     }
 
     return result;
@@ -109,10 +117,12 @@ public class AiSummaryService {
     }
 
     // Fetch user's custom prompt (if any)
-    String customPrompt = userRepository.findByEmail(username)
-        .map(User::getCustomSummaryPrompt)
-        .filter(p -> p != null && !p.isBlank())
-        .orElse(null);
+    String customPrompt =
+        userRepository
+            .findByEmail(username)
+            .map(User::getCustomSummaryPrompt)
+            .filter(p -> p != null && !p.isBlank())
+            .orElse(null);
 
     String input = buildInput(username, messageId, content);
     // Include custom prompt hash in cache key to differentiate results
@@ -169,7 +179,12 @@ public class AiSummaryService {
    * cached result.
    */
   private AiSummaryResult callAiWithLock(
-      String cacheKey, String messageId, String username, String contentHash, String input, String customPrompt) {
+      String cacheKey,
+      String messageId,
+      String username,
+      String contentHash,
+      String input,
+      String customPrompt) {
     ReentrantLock lock = keyLocks.computeIfAbsent(cacheKey, k -> new ReentrantLock());
     lock.lock();
     try {
@@ -210,7 +225,10 @@ public class AiSummaryService {
       }
 
       // Now safe to call AI - we hold the lock (with custom prompt if provided)
-      log.debug("[AI CALL] messageId={}, customPrompt={}", messageId, customPrompt != null ? "yes" : "no");
+      log.debug(
+          "[AI CALL] messageId={}, customPrompt={}",
+          messageId,
+          customPrompt != null ? "yes" : "no");
       AiSummaryResult result = aiProviderRouter.summarize(input, customPrompt);
 
       // Save to L1 cache
@@ -226,7 +244,7 @@ public class AiSummaryService {
         if (existing.isEmpty()) {
           // Encrypt summary before storing
           String encryptedSummary = encryptionService.encrypt(result.getSummary());
-          emailSummaryRepository.insertIgnoreDuplicate(
+          emailSummaryRepository.saveIfNotExists(
               messageId,
               username,
               contentHash,

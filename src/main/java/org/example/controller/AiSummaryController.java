@@ -52,7 +52,8 @@ public class AiSummaryController {
 
   @Operation(
       summary = "Regenerate email summary",
-      description = "Force regenerates AI summary bypassing cache. Uses user's custom prompt if set.")
+      description =
+          "Force regenerates AI summary bypassing cache. Uses user's custom prompt if set.")
   @PostMapping("/email-summary/regenerate")
   public ResponseWrapper<AiEmailSummaryResponse> regenerateSummary(
       @AuthenticationPrincipal UserDetails userDetails,

@@ -13,19 +13,19 @@ import lombok.NoArgsConstructor;
 @Schema(description = "Response object containing user settings")
 public class UserSettingsResponse {
 
-  @Schema(
-      description = "User's email address",
-      example = "user@example.com")
+  @Schema(description = "User's email address", example = "user@example.com")
   private String email;
 
   @Schema(
-      description = "Custom AI summary prompt for email summarization. Null if using default prompt.",
+      description =
+          "Custom AI summary prompt for email summarization. Null if using default prompt.",
       example = "Summarize this email in Vietnamese, focusing on action items and deadlines.")
   private String customSummaryPrompt;
 
   @Schema(
       description = "The default system prompt used when customSummaryPrompt is not set",
-      example = "You are an email assistant. Summarize the following email in 1-2 concise sentences...")
+      example =
+          "You are an email assistant. Summarize the following email in 1-2 concise sentences...")
   private String defaultPrompt;
 
   @Schema(
