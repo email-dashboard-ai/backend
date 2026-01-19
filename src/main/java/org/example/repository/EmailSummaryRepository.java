@@ -36,16 +36,14 @@ public interface EmailSummaryRepository extends JpaRepository<EmailSummary, Long
       @Param("model") String model);
 
   /**
-   * Delete all summaries for a specific message and user.
-   * Used when regenerating summaries to clear old cached versions.
+   * Delete all summaries for a specific message and user. Used when regenerating summaries to clear
+   * old cached versions.
    */
   @Modifying
   @Transactional
   @Query("DELETE FROM EmailSummary e WHERE e.messageId = :messageId AND e.userEmail = :userEmail")
   void deleteByMessageIdAndUserEmail(
-      @Param("messageId") String messageId,
-      @Param("userEmail") String userEmail);
-
+      @Param("messageId") String messageId, @Param("userEmail") String userEmail);
 
   @Transactional
   default void saveIfNotExists(
@@ -56,18 +54,19 @@ public interface EmailSummaryRepository extends JpaRepository<EmailSummary, Long
       String provider,
       String model) {
     // Check if already exists
-    Optional<EmailSummary> existing = findByMessageIdAndUserEmailAndContentHash(
-        messageId, userEmail, contentHash);
-    
+    Optional<EmailSummary> existing =
+        findByMessageIdAndUserEmailAndContentHash(messageId, userEmail, contentHash);
+
     if (existing.isEmpty()) {
-      EmailSummary entity = EmailSummary.builder()
-          .messageId(messageId)
-          .userEmail(userEmail)
-          .contentHash(contentHash)
-          .summary(summary)
-          .provider(provider)
-          .model(model)
-          .build();
+      EmailSummary entity =
+          EmailSummary.builder()
+              .messageId(messageId)
+              .userEmail(userEmail)
+              .contentHash(contentHash)
+              .summary(summary)
+              .provider(provider)
+              .model(model)
+              .build();
       save(entity);
     }
   }

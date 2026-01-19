@@ -36,8 +36,10 @@ public class UserServiceImpl implements UserService {
 
   @Override
   public UserSettingsResponse getUserSettings(String email) {
-    User user = userRepository.findByEmail(email)
-        .orElseThrow(() -> new RuntimeException("User not found: " + email));
+    User user =
+        userRepository
+            .findByEmail(email)
+            .orElseThrow(() -> new RuntimeException("User not found: " + email));
 
     String customPrompt = user.getCustomSummaryPrompt();
     boolean usingCustom = customPrompt != null && !customPrompt.isBlank();
@@ -53,8 +55,10 @@ public class UserServiceImpl implements UserService {
   @Override
   @Transactional
   public UserSettingsResponse updateUserSettings(String email, UpdateUserSettingsRequest request) {
-    User user = userRepository.findByEmail(email)
-        .orElseThrow(() -> new RuntimeException("User not found: " + email));
+    User user =
+        userRepository
+            .findByEmail(email)
+            .orElseThrow(() -> new RuntimeException("User not found: " + email));
 
     // Set custom prompt (null or empty string will clear it)
     String newPrompt = request.getCustomSummaryPrompt();

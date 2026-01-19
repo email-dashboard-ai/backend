@@ -396,7 +396,8 @@ public class EmailServiceImpl implements EmailService {
                   syncedEmailRepository.save(email);
                 } catch (Exception e) {
                   // Ignore duplicate key errors, log others
-                  if (!e.getMessage().contains("duplicate") && !e.getMessage().contains("constraint")) {
+                  if (!e.getMessage().contains("duplicate")
+                      && !e.getMessage().contains("constraint")) {
                     log.debug("Failed to sync email {}: {}", email.getMessageId(), e.getMessage());
                   }
                 }

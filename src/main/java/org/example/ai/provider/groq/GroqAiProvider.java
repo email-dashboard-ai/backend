@@ -47,9 +47,10 @@ public class GroqAiProvider implements AiProvider {
 
     String model = aiConfig.getGroq().getModel();
     // Use custom prompt if provided, otherwise fall back to default
-    String systemPrompt = (customPrompt != null && !customPrompt.isBlank()) 
-        ? customPrompt 
-        : aiConfig.getSummaryPrompt();
+    String systemPrompt =
+        (customPrompt != null && !customPrompt.isBlank())
+            ? customPrompt
+            : aiConfig.getSummaryPrompt();
     String prompt = systemPrompt + "\n\nEMAIL:\n" + inputText + "\n\nSUMMARY:";
 
     long start = System.nanoTime();
