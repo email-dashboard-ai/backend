@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.repository.SyncedEmailRepository;
+import org.example.service.EmailCleanupService;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,7 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class EmailCleanupService {
+public class EmailCleanupServiceImpl implements EmailCleanupService {
 
   private final SyncedEmailRepository syncedEmailRepository;
   private final org.example.config.AppConfig appConfig;

@@ -10,6 +10,7 @@ import org.example.enums.AuthProvider;
 import org.example.model.SnoozedEmail;
 import org.example.model.User;
 import org.example.repository.SnoozedEmailRepository;
+import org.example.service.impl.SnoozeSchedulerServiceImpl;
 import org.example.service.impl.strategy.EmailProviderStrategy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,7 +30,7 @@ class SnoozeSchedulerServiceTest {
   void setUp() {
     Map<AuthProvider, EmailProviderStrategy> strategies =
         Map.of(AuthProvider.GOOGLE, emailProviderStrategy);
-    snoozeSchedulerService = new SnoozeSchedulerService(snoozedEmailRepository, strategies);
+    snoozeSchedulerService = new SnoozeSchedulerServiceImpl(snoozedEmailRepository, strategies);
   }
 
   @Test

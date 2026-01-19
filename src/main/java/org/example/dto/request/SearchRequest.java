@@ -102,8 +102,8 @@ public class SearchRequest {
 
     // Include body text for Gmail search (when not using fuzzy)
     if (isNotBlank(body) && !Boolean.TRUE.equals(useFuzzySearch)) {
-      // Use quotes for exact phrase search, matching Gmail web behavior
-      query.append("\"").append(body).append("\" ");
+      // Flexible keyword search (matches any occurrence of keywords, like Gmail Web UI)
+      query.append(body).append(" ");
     }
 
     return query.toString().trim();
