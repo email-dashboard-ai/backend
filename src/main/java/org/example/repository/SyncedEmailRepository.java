@@ -41,9 +41,9 @@ public interface SyncedEmailRepository extends JpaRepository<SyncedEmail, String
       @Param("userEmail") String userEmail, @Param("query") String query);
 
   /**
-   * Semantic search using vector similarity (cosine distance)
-   * Finds emails most similar to the query embedding
-   * 
+   * Semantic search using vector similarity (cosine distance) Finds emails most similar to the
+   * query embedding
+   *
    * @param userEmail User's email address
    * @param queryEmbedding Query embedding as string representation of vector
    * @param limit Maximum number of results to return
@@ -63,9 +63,8 @@ public interface SyncedEmailRepository extends JpaRepository<SyncedEmail, String
       @Param("limit") int limit);
 
   /**
-   * Find emails without embeddings for a specific user
-   * Used for background generation of embeddings
-   * 
+   * Find emails without embeddings for a specific user Used for background generation of embeddings
+   *
    * @param userEmail User's email address
    * @return List of emails that need embeddings
    */

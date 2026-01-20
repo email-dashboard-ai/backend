@@ -252,26 +252,23 @@ public class EmailServiceImpl implements EmailService {
   public List<org.example.dto.response.SearchResultDTO> semanticSearch(
       String email, org.example.dto.request.SemanticSearchRequest request) {
     User user = userRepository.findByEmail(email).orElseThrow();
-    
+
     log.info("Semantic search: query='{}', limit={}", request.getQuery(), request.getLimit());
-    
+
     // Generate embedding for the search query
     PGvector queryEmbedding = embeddingService.generateEmbedding(request.getQuery());
-    
+
     if (queryEmbedding == null) {
       log.warn("Failed to generate embedding for query: {}", request.getQuery());
       return List.of();
     }
-    
+
     // Search using vector similarity
-    var results = syncedEmailRepository.semanticSearch(
-        email, 
-        queryEmbedding.toString(), 
-        request.getLimit()
-    );
-    
+    var results =
+        syncedEmailRepository.semanticSearch(email, queryEmbedding.toString(), request.getLimit());
+
     log.debug("Semantic search returned {} results", results.size());
-    
+
     return results.stream()
         .map(e -> org.example.dto.response.SearchResultDTO.fromSyncedEmail(e, "SEMANTIC"))
         .collect(Collectors.toList());
@@ -285,9 +282,7 @@ public class EmailServiceImpl implements EmailService {
         .collect(Collectors.toList());
   }
 
-  /**
-   * Search internal DB: searches synced emails in database without fetching from Gmail.
-   */
+  /** Search internal DB: searches synced emails in database without fetching from Gmail. */
   private List<org.example.dto.response.SearchResultDTO> searchInternalWithSync(
       User user, String email, String fuzzyQuery) {
     // Search in synced DB (removed pre-sync to improve performance)
@@ -397,11 +392,9 @@ public class EmailServiceImpl implements EmailService {
           try {
             // Generate embedding if not already present
             if (email.getEmbedding() == null) {
-              PGvector embedding = embeddingService.generateEmailEmbedding(
-                  email.getSubject(),
-                  email.getFrom(),
-                  email.getBody()
-              );
+              PGvector embedding =
+                  embeddingService.generateEmailEmbedding(
+                      email.getSubject(), email.getFrom(), email.getBody());
               if (embedding != null) {
                 email.setEmbedding(embedding);
                 email.setEmbeddingGeneratedAt(java.time.LocalDateTime.now());
@@ -437,11 +430,9 @@ public class EmailServiceImpl implements EmailService {
                 try {
                   // Generate embedding if not already present
                   if (email.getEmbedding() == null) {
-                    PGvector embedding = embeddingService.generateEmailEmbedding(
-                        email.getSubject(),
-                        email.getFrom(),
-                        email.getBody()
-                    );
+                    PGvector embedding =
+                        embeddingService.generateEmailEmbedding(
+                            email.getSubject(), email.getFrom(), email.getBody());
                     if (embedding != null) {
                       email.setEmbedding(embedding);
                       email.setEmbeddingGeneratedAt(java.time.LocalDateTime.now());
