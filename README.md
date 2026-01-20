@@ -88,10 +88,55 @@ The backend exposes an authenticated endpoint:
   - If `content` is provided, the backend summarizes it directly (avoids extra Gmail fetch latency).
   - If `content` is omitted, the backend fetches the email by `messageId` and extracts text.
 
+### 1.2 🔍 Semantic Search (pgvector + Google Embeddings)
+
+**What is Semantic Search?**
+Semantic search uses AI to find emails based on conceptual meaning rather than exact keywords. Query "money" finds emails about "invoice", "price", "salary", "payment", "billing", etc.
+
+**Setup Requirements:**
+
+1. **Enable pgvector extension** (Docker Compose already configured)
+2. **Set Google AI API key** for embedding generation:
+
+```bash
+export GOOGLE_AI_API_KEY="your-google-ai-api-key"
+```
+
+Get your API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
+
+**Endpoints:**
+
+- **`POST /api/gmail/semantic-search`** - Search emails by semantic similarity
+  - Body: `{ "query": "money matters", "limit": 20 }`
+  - Response: Array of `SearchResult` with `strategy: "SEMANTIC"`
+  - Example queries:
+    - `"money"` → finds "invoice", "payment", "salary", "billing"
+    - `"important updates"` → finds "announcement", "notification", "alert"
+    - `"schedule meeting"` → finds "calendar", "appointment", "availability"
+
+- **`POST /api/gmail/embeddings/generate`** - Generate embeddings for existing emails
+  - No body required (authenticated endpoint)
+  - Response: `{ "processed": 145 }`
+  - Use this to backfill embeddings for emails synced before semantic search was enabled
+
+**How it works:**
+
+1. When emails are synced, the system generates 768-dimensional vector embeddings using Google's text-embedding-004 model
+2. Embeddings are stored in PostgreSQL with pgvector extension
+3. Search queries are converted to embeddings and matched using cosine similarity
+4. Results are ranked by semantic relevance (closest vector distance)
+
+**Performance:**
+
+- First search after enabling: May need to generate embeddings (use `/embeddings/generate`)
+- Subsequent searches: Fast vector similarity search with IVFFlat index
+- Embedding generation: ~100ms per email (done in background during sync)
+
+📖 **Detailed documentation:** See [SEMANTIC_SEARCH.md](./SEMANTIC_SEARCH.md) for architecture, configuration, and troubleshooting.
+
 ### 2. 🔑 Google Cloud Setup
 
 1. **Create Google Cloud Project**
-
    - Visit [Google Cloud Console](https://console.cloud.google.com/)
    - Create a new project or select existing one
 
@@ -103,7 +148,6 @@ The backend exposes an authenticated endpoint:
    ```
 
 3. **Configure OAuth Consent Screen**
-
    - Add authorized domains
    - Set scopes (APIs & Services > OAuth Consent Screen > Data Access): `https://www.googleapis.com/auth/gmail.readonly`
    - Add test users

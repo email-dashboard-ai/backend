@@ -40,5 +40,42 @@ public interface SyncedEmailRepository extends JpaRepository<SyncedEmail, String
   List<SyncedEmail> searchEmails(
       @Param("userEmail") String userEmail, @Param("query") String query);
 
+  /**
+   * Semantic search using vector similarity (cosine distance) Finds emails most similar to the
+   * query embedding
+   *
+   * @param userEmail User's email address
+   * @param queryEmbedding Query embedding as string representation of vector
+   * @param limit Maximum number of results to return
+   * @return List of similar emails ordered by similarity (most similar first)
+   */
+  @Query(
+      value =
+          "SELECT * FROM synced_emails e "
+              + "WHERE e.user_email = :userEmail "
+              + "AND e.embedding IS NOT NULL "
+              + "ORDER BY e.embedding <=> CAST(:queryEmbedding AS vector) "
+              + "LIMIT :limit",
+      nativeQuery = true)
+  List<SyncedEmail> semanticSearch(
+      @Param("userEmail") String userEmail,
+      @Param("queryEmbedding") String queryEmbedding,
+      @Param("limit") int limit);
+
+  /**
+   * Find emails without embeddings for a specific user Used for background generation of embeddings
+   *
+   * @param userEmail User's email address
+   * @return List of emails that need embeddings
+   */
+  @Query(
+      value =
+          "SELECT * FROM synced_emails e "
+              + "WHERE e.user_email = :userEmail "
+              + "AND e.embedding IS NULL "
+              + "ORDER BY e.received_date DESC",
+      nativeQuery = true)
+  List<SyncedEmail> findEmailsWithoutEmbeddings(@Param("userEmail") String userEmail);
+
   void deleteByReceivedDateBefore(LocalDateTime cutoff);
 }

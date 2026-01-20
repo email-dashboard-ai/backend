@@ -28,6 +28,7 @@ class EmailServiceTest {
   @Mock private AppConfig appConfig;
   @Mock private SearchOrchestrator searchOrchestrator;
   @Mock private EmailProviderStrategy emailProviderStrategy;
+  @Mock private org.example.service.EmbeddingService embeddingService;
 
   private EmailServiceImpl emailService;
 
@@ -44,7 +45,8 @@ class EmailServiceTest {
             snoozedEmailRepository,
             syncedEmailRepository,
             appConfig,
-            searchOrchestrator);
+            searchOrchestrator,
+            embeddingService);
   }
 
   @Test

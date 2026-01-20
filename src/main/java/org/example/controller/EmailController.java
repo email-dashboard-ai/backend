@@ -15,6 +15,7 @@ import org.example.dto.request.SendEmailRequest;
 import org.example.dto.request.SnoozeEmailRequest;
 import org.example.dto.response.EmailPageResponse;
 import org.example.helper.ResponseWrapper;
+import org.example.service.EmailEmbeddingService;
 import org.example.service.EmailService;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -33,6 +34,7 @@ public class EmailController {
 
   private final EmailService emailService;
   private final AppConfig appConfig;
+  private final EmailEmbeddingService emailEmbeddingService;
 
   @Operation(
       summary = "Get Mailboxes",
@@ -285,5 +287,33 @@ public class EmailController {
     return ResponseWrapper.success(
         emailService.search(userDetails.getUsername(), request),
         "Search results fetched successfully");
+  }
+
+  @Operation(
+      summary = "Semantic Email Search",
+      description =
+          "Performs semantic search using vector embeddings to find emails similar in meaning "
+              + "to the query. Returns the most semantically similar emails based on content.")
+  @PostMapping("/semantic-search")
+  public ResponseWrapper<List<org.example.dto.response.SearchResultDTO>> semanticSearch(
+      @AuthenticationPrincipal UserDetails userDetails,
+      @RequestBody org.example.dto.request.SemanticSearchRequest request) {
+    return ResponseWrapper.success(
+        emailService.semanticSearch(userDetails.getUsername(), request),
+        "Semantic search results fetched successfully");
+  }
+
+  @Operation(
+      summary = "Generate Missing Embeddings",
+      description =
+          "Generates embeddings for all emails that don't have embeddings yet for the current user. "
+              + "This is useful for backfilling embeddings on existing emails.")
+  @PostMapping("/embeddings/generate")
+  public ResponseWrapper<java.util.Map<String, Integer>> generateMissingEmbeddings(
+      @AuthenticationPrincipal UserDetails userDetails) {
+    int processed = emailEmbeddingService.generateMissingEmbeddings(userDetails.getUsername());
+    return ResponseWrapper.success(
+        java.util.Map.of("processed", processed),
+        "Generated embeddings for " + processed + " emails");
   }
 }
