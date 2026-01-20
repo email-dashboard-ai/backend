@@ -2,6 +2,7 @@ package org.example.service.impl;
 
 import com.google.api.services.gmail.model.Label;
 import com.google.api.services.gmail.model.Message;
+import com.pgvector.PGvector;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +16,7 @@ import org.example.model.User;
 import org.example.repository.SnoozedEmailRepository;
 import org.example.repository.UserRepository;
 import org.example.service.EmailService;
+import org.example.service.EmbeddingService;
 import org.example.service.impl.strategy.EmailProviderStrategy;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
@@ -29,6 +31,7 @@ public class EmailServiceImpl implements EmailService {
   private final org.example.repository.SyncedEmailRepository syncedEmailRepository;
   private final org.example.config.AppConfig appConfig;
   private final SearchOrchestrator searchOrchestrator;
+  private final EmbeddingService embeddingService;
 
   public EmailServiceImpl(
       UserRepository userRepository,
@@ -36,12 +39,14 @@ public class EmailServiceImpl implements EmailService {
       SnoozedEmailRepository snoozedEmailRepository,
       org.example.repository.SyncedEmailRepository syncedEmailRepository,
       org.example.config.AppConfig appConfig,
-      SearchOrchestrator searchOrchestrator) {
+      SearchOrchestrator searchOrchestrator,
+      EmbeddingService embeddingService) {
     this.userRepository = userRepository;
     this.snoozedEmailRepository = snoozedEmailRepository;
     this.syncedEmailRepository = syncedEmailRepository;
     this.appConfig = appConfig;
     this.searchOrchestrator = searchOrchestrator;
+    this.embeddingService = embeddingService;
 
     // Convert list of strategies to a Map for O(1) lookup: { LOCAL -> MockStrategy,
     // GOOGLE ->
@@ -243,6 +248,35 @@ public class EmailServiceImpl implements EmailService {
     };
   }
 
+  @Override
+  public List<org.example.dto.response.SearchResultDTO> semanticSearch(
+      String email, org.example.dto.request.SemanticSearchRequest request) {
+    User user = userRepository.findByEmail(email).orElseThrow();
+    
+    log.info("Semantic search: query='{}', limit={}", request.getQuery(), request.getLimit());
+    
+    // Generate embedding for the search query
+    PGvector queryEmbedding = embeddingService.generateEmbedding(request.getQuery());
+    
+    if (queryEmbedding == null) {
+      log.warn("Failed to generate embedding for query: {}", request.getQuery());
+      return List.of();
+    }
+    
+    // Search using vector similarity
+    var results = syncedEmailRepository.semanticSearch(
+        email, 
+        queryEmbedding.toString(), 
+        request.getLimit()
+    );
+    
+    log.debug("Semantic search returned {} results", results.size());
+    
+    return results.stream()
+        .map(e -> org.example.dto.response.SearchResultDTO.fromSyncedEmail(e, "SEMANTIC"))
+        .collect(Collectors.toList());
+  }
+
   private List<org.example.dto.response.SearchResultDTO> searchByGmailApi(
       User user, String gmailQuery) {
     var messages = getStrategy(user).searchByGmailQuery(user, gmailQuery);
@@ -252,15 +286,11 @@ public class EmailServiceImpl implements EmailService {
   }
 
   /**
-   * Search internal DB with pre-sync: fetches recent emails from Gmail and syncs them before
-   * searching to ensure body content is available for fuzzy matching.
+   * Search internal DB: searches synced emails in database without fetching from Gmail.
    */
   private List<org.example.dto.response.SearchResultDTO> searchInternalWithSync(
       User user, String email, String fuzzyQuery) {
-    // Step 1: Fetch and sync recent emails from Gmail (synchronously)
-    syncRecentEmailsForSearch(user, email);
-
-    // Step 2: Search in synced DB
+    // Search in synced DB (removed pre-sync to improve performance)
     var results = syncedEmailRepository.searchEmails(email, fuzzyQuery);
     return results.stream()
         .map(e -> org.example.dto.response.SearchResultDTO.fromSyncedEmail(e, "INTERNAL"))
@@ -365,6 +395,18 @@ public class EmailServiceImpl implements EmailService {
         // Use saveAll with try-catch for each to handle duplicates gracefully
         for (org.example.model.SyncedEmail email : syncedEmails) {
           try {
+            // Generate embedding if not already present
+            if (email.getEmbedding() == null) {
+              PGvector embedding = embeddingService.generateEmailEmbedding(
+                  email.getSubject(),
+                  email.getFrom(),
+                  email.getBody()
+              );
+              if (embedding != null) {
+                email.setEmbedding(embedding);
+                email.setEmbeddingGeneratedAt(java.time.LocalDateTime.now());
+              }
+            }
             syncedEmailRepository.save(email);
           } catch (Exception e) {
             // Ignore duplicate key errors, log others
@@ -393,6 +435,18 @@ public class EmailServiceImpl implements EmailService {
               // Handle duplicates gracefully - save one by one and ignore constraint violations
               for (org.example.model.SyncedEmail email : syncedEmails) {
                 try {
+                  // Generate embedding if not already present
+                  if (email.getEmbedding() == null) {
+                    PGvector embedding = embeddingService.generateEmailEmbedding(
+                        email.getSubject(),
+                        email.getFrom(),
+                        email.getBody()
+                    );
+                    if (embedding != null) {
+                      email.setEmbedding(embedding);
+                      email.setEmbeddingGeneratedAt(java.time.LocalDateTime.now());
+                    }
+                  }
                   syncedEmailRepository.save(email);
                 } catch (Exception e) {
                   // Ignore duplicate key errors, log others

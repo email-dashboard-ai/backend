@@ -61,6 +61,9 @@ public interface EmailService {
   java.util.List<org.example.dto.response.SearchResultDTO> search(
       String email, org.example.dto.request.SearchRequest request);
 
+  java.util.List<org.example.dto.response.SearchResultDTO> semanticSearch(
+      String email, org.example.dto.request.SemanticSearchRequest request);
+
   void moveToInbox(String email, String messageId);
 
   void permanentlyDelete(String email, String messageId);
