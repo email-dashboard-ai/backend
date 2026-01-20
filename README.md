@@ -128,34 +128,219 @@ Get your API key from [Google AI Studio](https://makersuite.google.com/app/apike
 
 **Performance:**
 
-- First search after enabling: May need to generate embeddings (use `/embeddings/generate`)
-- Subsequent searches: Fast vector similarity search with IVFFlat index
-- Embedding generation: ~100ms per email (done in background during sync)
+- **Query embedding generation**: ~1-2 seconds (Google AI API call)
+- **Vector similarity search**: ~10-50ms with HNSW index
+- **Total search time**: ~1-2 seconds end-to-end
+- **Embedding generation**: ~100-200ms per email (background during sync)
+- **Index type**: HNSW (Hierarchical Navigable Small World) for sub-millisecond vector search
+
+**Index Creation:**
+
+The system automatically creates an HNSW index for fast vector similarity search:
+
+```sql
+CREATE INDEX synced_emails_embedding_hnsw_idx
+ON synced_emails
+USING hnsw (embedding vector_cosine_ops);
+```
+
+**Frontend UI:**
+
+The frontend provides a dropdown menu with three search modes:
+
+- **Keyword Search** (🔍): Exact word matching
+- **Fuzzy Search** (✨): Typo-tolerant search
+- **AI Semantic Search** (🧠): Conceptual similarity using embeddings
+
+**Security Considerations:**
+
+- Google API keys are stored in environment variables
+- Embeddings are generated server-side only
+- JWT authentication required for all search endpoints
+- Vector data stored securely in PostgreSQL
+
+**Token Storage:**
+
+- **Google Refresh Tokens**: Securely stored in PostgreSQL `users` table (encrypted at rest)
+- **JWT Access Tokens**: Stored client-side (localStorage), 30-day expiration
+- **JWT Refresh Tokens**: Stored server-side in `refresh_tokens` table with user association
 
 📖 **Detailed documentation:** See [SEMANTIC_SEARCH.md](./SEMANTIC_SEARCH.md) for architecture, configuration, and troubleshooting.
 
-### 2. 🔑 Google Cloud Setup
+### 2. 🔑 Google OAuth 2.0 Setup
+
+**Prerequisites:**
+
+- Google Cloud account
+- Project with billing enabled (for Gmail API)
+
+**Step-by-Step Setup:**
 
 1. **Create Google Cloud Project**
    - Visit [Google Cloud Console](https://console.cloud.google.com/)
    - Create a new project or select existing one
+   - Note your Project ID
 
-2. **Enable APIs**
+2. **Enable Required APIs**
 
    ```bash
    # Enable Gmail API
    gcloud services enable gmail.googleapis.com
+
+   # Enable Generative Language API (for embeddings)
+   gcloud services enable generativelanguage.googleapis.com
    ```
 
 3. **Configure OAuth Consent Screen**
-   - Add authorized domains
-   - Set scopes (APIs & Services > OAuth Consent Screen > Data Access): `https://www.googleapis.com/auth/gmail.readonly`
-   - Add test users
+   - Navigate to: APIs & Services > OAuth consent screen
+   - Choose **External** (for testing) or **Internal** (for workspace)
+   - Fill in required fields:
+     - App name: "Email Dashboard"
+     - User support email: your-email@example.com
+     - Developer contact: your-email@example.com
+   - **Scopes**: Add `https://www.googleapis.com/auth/gmail.readonly`
+   - **Test users**: Add email addresses that can access during development
 
 4. **Create OAuth 2.0 Credentials**
-   - Application type: Web application
-   - Authorized origins: `http://localhost:3000`, `http://localhost:5173`
-   - **Note:** Since we use the popup flow (`postmessage`), you must add these to **Authorized JavaScript origins**. The **Authorized redirect URIs** field can be left empty.
+   - Navigate to: APIs & Services > Credentials
+   - Click **Create Credentials** > **OAuth 2.0 Client ID**
+   - Application type: **Web application**
+   - Name: "Email Dashboard Client"
+   - **Authorized JavaScript origins**:
+     - `http://localhost:3000` (backend)
+     - `http://localhost:5173` (frontend dev server)
+     - Your production domain (when deploying)
+
+## 📡 API Endpoints
+
+### Authentication
+
+- `POST /api/auth/register` - Register new user (local auth)
+- `POST /api/auth/login` - Login with email/password
+- `POST /api/auth/google` - Login with Google OAuth
+- `POST /api/auth/refresh` - Refresh JWT access token
+- `POST /api/auth/logout` - Logout (invalidate tokens)
+
+### Email Operations
+
+- `GET /api/gmail/messages` - List emails with pagination
+- `GET /api/gmail/messages/{id}` - Get email details
+- `GET /api/gmail/labels` - List mailbox labels
+- `POST /api/gmail/search` - Keyword/fuzzy search
+- `POST /api/gmail/semantic-search` - AI semantic search
+- `POST /api/gmail/embeddings/generate` - Generate embeddings
+
+### AI Features
+
+- `POST /api/ai/email-summary` - Generate email summary (Gemini)
+
+### User Management
+
+- `GET /api/users/profile` - Get user profile
+- `PUT /api/users/profile` - Update user profile
+
+All endpoints (except auth) require `Authorization: Bearer <jwt-token>` header.
+
+## 🔐 Token Storage & Security
+
+### Token Types
+
+1. **JWT Access Token** (Client-side)
+   - **Storage**: Browser localStorage
+   - **Expiration**: 30 days
+   - **Purpose**: Authenticate API requests
+   - **Contains**: User email, avatar URL
+   - **Algorithm**: HMAC-SHA384
+
+2. **JWT Refresh Token** (Server-side)
+   - **Storage**: PostgreSQL `refresh_tokens` table
+   - **Expiration**: 30 days
+   - **Purpose**: Generate new access tokens
+   - **Security**: UUID-based, one-time use with lock
+
+3. **Google Refresh Token** (Server-side)
+   - **Storage**: PostgreSQL `users.google_refresh_token` column
+   - **Expiration**: Never (revocable by user)
+   - **Purpose**: Access Gmail API without re-authentication
+   - **Security**: Encrypted at rest, never exposed to client
+
+### Token Flow Diagram
+
+```
+┌─────────────┐         JWT Access Token          ┌─────────────┐
+│   Frontend  │◄──────────────────────────────────┤   Backend   │
+│  (React)    │                                    │ (Spring)    │
+└─────────────┘                                    └─────────────┘
+       │                                                  │
+       │  API Requests                                    │ Stores Google
+       │  (Bearer Token)                                  │ Refresh Token
+       │                                                  │
+       ▼                                                  ▼
+ localStorage                                    ┌─────────────┐
+                                                 │ PostgreSQL  │
+                                                 │  Database   │
+                                                 └─────────────┘
+```
+
+### Security Measures
+
+- ✅ **HTTPS Only**: Enforce SSL/TLS in production
+- ✅ **CORS**: Whitelist allowed origins
+- ✅ **Password Hashing**: BCrypt with 10 rounds
+- ✅ **JWT Signing**: HMAC-SHA384 with secret key
+- ✅ **Token Rotation**: Refresh tokens invalidated after use
+- ✅ **XSS Protection**: Content Security Policy headers
+- ✅ **SQL Injection**: Parameterized queries (JPA)
+- ✅ **Rate Limiting**: Implement in production (e.g., Spring Bucket4j)
+
+---
+
+**Development Tools:**
+
+```bash
+# Format Java code
+mvn spotless:apply
+
+# Run tests
+mvn test
+
+# Build without tests
+mvn clean package -DskipTests
+
+# Check code quality
+mvn verify
+```
+
+---
+
+**Built with ❤️ by the Team**
+
+---
+
+> **⚠️ Important**: This is a demonstration project. For production deployment:
+>
+> - Enable HTTPS with valid SSL certificates
+> - Implement rate limiting and DDoS protection
+> - Set up monitoring and alerting (e.g., Prometheus, Grafana)
+> - Enable database backups and disaster recovery
+> - Conduct security audits and penetration testing
+> - Comply with GDPR, CCPA, and other data protection regulations
+> - Use secrets management (AWS Secrets Manager, HashiCorp Vault)
+> - Implement comprehensive logging and audit trails
+>   google-ai:
+
+     api-key: "your-google-ai-studio-api-key"
+
+````
+
+**Security Best Practices:**
+
+- ✅ Never commit credentials to git
+- ✅ Use environment variables for production
+- ✅ Rotate API keys periodically
+- ✅ Restrict OAuth scopes to minimum required
+- ✅ Enable audit logging in Google Cloud Console
+- ✅ Use separate projects for dev/staging/production
 
 ### 3. 🐳 Deploy with Docker
 
@@ -168,7 +353,7 @@ docker compose logs -f backend
 
 # Stop services
 docker compose down
-```
+````
 
 **Service URLs:**
 
